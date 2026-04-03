@@ -5,9 +5,8 @@
   "scripts": {
     "bundle:bun": "bun build src/bun/index.ts --target bun --outdir prebuild",
     "bundle:bun:watch": "bun build src/bun/index.ts --target bun --outdir prebuild --watch",
-    "start": "bun run bundle:bun && vite build && electrobun dev",
-    "dev": "bun run bundle:bun && vite build && electrobun dev --watch",
-    "dev:hmr": "concurrently \"bun run hmr\" \"bun run start\"",
+    "dev": "concurrently \"vite --port 5173\" \"bun run bundle:bun && vite build && electrobun dev\"",
+    "dev:full": "bun run bundle:bun && vite build && electrobun dev --watch",
     "hmr": "vite --port 5173"
   },
   "devDependencies": {
