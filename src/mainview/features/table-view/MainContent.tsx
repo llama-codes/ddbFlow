@@ -47,18 +47,20 @@ export function MainContent({
           <h2 className={`text-sm font-semibold ${t.text.primary}`}>{selectedTable}</h2>
         </div>
         <div className="flex items-center gap-1">
+          <Tooltip text="Refresh data">
+            <Button.Container variant="ghost" onClick={onRefreshScan} disabled={scanLoading}>
+              <Button.Icon>
+                <Icon size={14}>{IconPaths.refresh}</Icon>
+              </Button.Icon>
+            </Button.Container>
+          </Tooltip>
           {scanCachedAt && (
-            <Tooltip text={`Cached · ${new Date(scanCachedAt).toLocaleString()}`}>
+            <Tooltip text={`Cached · ${new Date(scanCachedAt).toLocaleString()}`} position="left">
               <span className={`p-1 ${t.text.warning} flex items-center cursor-default`}>
                 <Icon size={13}>{IconPaths.clock}</Icon>
               </span>
             </Tooltip>
           )}
-          <Button.Container variant="ghost" onClick={onRefreshScan} title="Refresh data" disabled={scanLoading}>
-            <Button.Icon>
-              <Icon size={14}>{IconPaths.refresh}</Icon>
-            </Button.Icon>
-          </Button.Container>
         </div>
       </div>
 

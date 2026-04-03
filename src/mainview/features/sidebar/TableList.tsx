@@ -28,6 +28,14 @@ export function TableList({
 }: TableListProps) {
   const t = useTheme();
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  function toggleSearch() {
+    setSearchOpen((prev) => {
+      if (prev) setSearch("");
+      return !prev;
+    });
+  }
 
   const filtered = search.trim()
     ? tables.filter((t) => t.toLowerCase().includes(search.toLowerCase()))
@@ -38,6 +46,20 @@ export function TableList({
       <div className={`flex items-center justify-between px-3 py-2 border-b ${t.border.base}`}>
         <Title>Tables</Title>
         <div className="flex items-center gap-0.5">
+          <Tooltip text={searchOpen ? "Close search" : "Search tables"}>
+            <Button.Container variant="ghost" onClick={toggleSearch}>
+              <Button.Icon>
+                <Icon size={14} className={searchOpen ? t.text.brand : ""}>{IconPaths.search}</Icon>
+              </Button.Icon>
+            </Button.Container>
+          </Tooltip>
+          <Tooltip text="Refresh tables">
+            <Button.Container variant="ghost" onClick={onRefresh}>
+              <Button.Icon>
+                <Icon size={14}>{IconPaths.refresh}</Icon>
+              </Button.Icon>
+            </Button.Container>
+          </Tooltip>
           {cachedAt && (
             <Tooltip text={`Cached · ${new Date(cachedAt).toLocaleString()}`}>
               <span className={`p-1 ${t.text.warning} flex items-center cursor-default`}>
@@ -45,21 +67,18 @@ export function TableList({
               </span>
             </Tooltip>
           )}
-          <Button.Container variant="ghost" onClick={onRefresh} title="Refresh tables">
-            <Button.Icon>
-              <Icon size={14}>{IconPaths.refresh}</Icon>
-            </Button.Icon>
-          </Button.Container>
         </div>
       </div>
 
-      <div className={`px-2 py-1.5 border-b ${t.border.base}`}>
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Filter tables…"
-        />
-      </div>
+      {searchOpen && (
+        <div className={`px-2 py-1.5 border-b ${t.border.base}`}>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Filter tables…"
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto">
         {loading && (
