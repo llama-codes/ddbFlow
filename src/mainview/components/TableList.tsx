@@ -25,7 +25,7 @@ export function TableList({
 }: TableListProps) {
   const t = useTheme();
   return (
-    <div className={`${t.bg.surfaceDim} border-r ${t.border.base} flex flex-col`}>
+    <div className={`${t.bg.surfaceDim} border-r ${t.border.base} flex flex-col min-h-0`}>
       <div className={`flex items-center justify-between px-3 py-2 border-b ${t.border.base}`}>
         <Title>Tables</Title>
         <div className="flex items-center gap-0.5">
