@@ -45,12 +45,6 @@ export function MainContent({
       <div className={`flex items-center justify-between px-4 py-2 border-b ${t.border.base} shrink-0`}>
         <div className="flex items-center gap-2">
           <h2 className={`text-sm font-semibold ${t.text.primary}`}>{selectedTable}</h2>
-          {scanResult && (
-            <span className={`text-xs ${t.text.faint}`}>
-              {scanResult.count} item{scanResult.count !== 1 ? "s" : ""}
-              {scanResult.lastEvaluatedKey ? " (partial)" : ""}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-1">
           {scanCachedAt && (

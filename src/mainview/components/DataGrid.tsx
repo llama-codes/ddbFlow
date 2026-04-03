@@ -138,9 +138,18 @@ export function DataGrid({ items, tableKeys, hasNextPage, loadingNextPage, onLoa
 
       {/* Pagination footer */}
       <div className={`flex items-center justify-between px-4 py-2 border-t ${t.border.base} shrink-0`}>
-        <span className={`text-xs ${t.text.faint}`}>
-          {from}–{to} of {totalRows}{hasNextPage ? "+" : ""} items
-        </span>
+        <div className="flex items-center gap-1.5">
+          {hasNextPage && (
+            <Tooltip text="More items available. Use 'Load more from AWS' to fetch them." position="right">
+              <span className={`flex items-center ${t.text.warning} cursor-default`}>
+                <Icon size={13}>{IconPaths.warning}</Icon>
+              </span>
+            </Tooltip>
+          )}
+          <span className={`text-xs ${t.text.faint}`}>
+            {from}–{to} of {totalRows} loaded items
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <select
             value={pageSize}
@@ -153,10 +162,10 @@ export function DataGrid({ items, tableKeys, hasNextPage, loadingNextPage, onLoa
           </select>
           {isLastClientPage && hasNextPage && (
             <Button.Container
-              variant="default"
+              variant="sm"
               onClick={onLoadNextPage}
               disabled={loadingNextPage}
-              className="mr-2 text-xs"
+              className="mr-2"
             >
               <Button.Text>{loadingNextPage ? "Loading…" : "Load more from AWS"}</Button.Text>
             </Button.Container>

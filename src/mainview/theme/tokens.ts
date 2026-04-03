@@ -43,6 +43,7 @@ export const darkTheme = {
   // Complete interactive style bundles (hover variants need full strings for Tailwind scanner)
   button: {
     default: "px-3 py-2 text-sm bg-gray-800 border border-gray-700 text-gray-300 hover:text-gray-100 hover:bg-gray-700",
+    sm: "px-3 py-1 text-xs bg-gray-800 border border-gray-700 text-gray-300 hover:text-gray-100 hover:bg-gray-700",
     ghost: "p-1 text-gray-500 hover:text-gray-300 hover:bg-gray-800",
     icon: "p-2 text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-md transition-colors cursor-pointer",
   },

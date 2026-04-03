@@ -3,7 +3,7 @@ import { useTheme } from "../theme/ThemeProvider";
 
 interface ContainerProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
-  variant?: "default" | "ghost";
+  variant?: "default" | "sm" | "ghost";
 }
 
 function Container({ children, variant = "default", className = "", ...props }: ContainerProps) {
