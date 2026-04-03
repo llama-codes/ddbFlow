@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
 import { Button } from "../../components/Button";
+import { CacheIndicator } from "../../components/CacheIndicator";
 import { Title } from "../../components/Title";
 import { SearchInput } from "../../components/SearchInput";
 import { ListItem } from "./ListItem";
@@ -60,13 +61,7 @@ export function TableList({
               </Button.Icon>
             </Button.Container>
           </Tooltip>
-          {cachedAt && (
-            <Tooltip text={`Cached · ${new Date(cachedAt).toLocaleString()}`}>
-              <span className={`p-1 ${t.text.warning} flex items-center cursor-default`}>
-                <Icon size={13}>{IconPaths.clock}</Icon>
-              </span>
-            </Tooltip>
-          )}
+          <CacheIndicator cachedAt={cachedAt} />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
 import { Button } from "../../components/Button";
+import { CacheIndicator } from "../../components/CacheIndicator";
 import { DataGrid } from "./DataGrid";
 import { useTheme } from "../../theme/ThemeProvider";
 import type { QueryResult, TableInfo } from "shared/schemas";
@@ -54,13 +55,7 @@ export function MainContent({
               </Button.Icon>
             </Button.Container>
           </Tooltip>
-          {scanCachedAt && (
-            <Tooltip text={`Cached · ${new Date(scanCachedAt).toLocaleString()}`} position="left">
-              <span className={`p-1 ${t.text.warning} flex items-center cursor-default`}>
-                <Icon size={13}>{IconPaths.clock}</Icon>
-              </span>
-            </Tooltip>
-          )}
+          <CacheIndicator cachedAt={scanCachedAt} position="left" />
         </div>
       </div>
 
