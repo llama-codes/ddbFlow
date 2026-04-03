@@ -3,6 +3,7 @@ import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
 import { Button } from "../../components/Button";
 import { Title } from "../../components/Title";
+import { ListItem } from "./ListItem";
 import { useTheme } from "../../theme/ThemeProvider";
 
 interface TableListProps {
@@ -83,20 +84,15 @@ export function TableList({
 
         {!loading && filtered.length > 0 && (
           <ul>
-            {filtered.map((table) => {
-              const isSelected = table === selectedTable;
-              return (
-                <li key={table}>
-                  <button
-                    onClick={() => onSelectTable(table)}
-                    className={`w-full text-left px-3 py-2 text-sm truncate transition-colors cursor-pointer ${isSelected ? t.listItem.selected : t.listItem.base}`}
-                    title={table}
-                  >
-                    {table}
-                  </button>
-                </li>
-              );
-            })}
+            {filtered.map((table) => (
+              <li key={table}>
+                <ListItem
+                  label={table}
+                  selected={table === selectedTable}
+                  onClick={() => onSelectTable(table)}
+                />
+              </li>
+            ))}
           </ul>
         )}
       </div>
