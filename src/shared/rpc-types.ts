@@ -6,6 +6,7 @@ export type AppRPC = {
     requests: {
       ping: { params: Record<string, never>; response: string };
       listTables: { params: Record<string, never>; response: string[] };
+      setRegion: { params: { region: string }; response: string };
       describeTable: { params: { tableName: string }; response: TableInfo };
       scan: { params: ScanParams; response: QueryResult };
       query: { params: QueryParams; response: QueryResult };
