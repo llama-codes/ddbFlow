@@ -9,7 +9,10 @@ export default {
   build: {
     useAsar: true,
     bun: {
-      entrypoint: "src/bun/index.ts",
+      // Pre-bundled by Bun 1.3.11 (workaround: Electrobun 1.16.0 ships Bun 1.3.9
+      // which has a bundler bug with effect / @aws-sdk packages).
+      // Run `bun run bundle:bun` before `electrobun dev/build`.
+      entrypoint: "prebuild/index.js",
     },
     views: {},
     copy: {

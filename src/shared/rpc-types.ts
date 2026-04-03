@@ -1,9 +1,14 @@
 import type { RPCSchema } from "electrobun/view";
+import type { TableInfo, ScanParams, QueryParams, QueryResult } from "./schemas";
 
 export type AppRPC = {
   bun: RPCSchema<{
     requests: {
       ping: { params: Record<string, never>; response: string };
+      listTables: { params: Record<string, never>; response: string[] };
+      describeTable: { params: { tableName: string }; response: TableInfo };
+      scan: { params: ScanParams; response: QueryResult };
+      query: { params: QueryParams; response: QueryResult };
     };
     messages: {
       log: { msg: string };

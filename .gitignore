@@ -5,7 +5,11 @@ node_modules
 out
 dist
 build
+prebuild
 artifacts
+tmp-build
+tmp-electrobun-prebundle
+tmp-electrobun-test
 *.tgz
 
 # code coverage

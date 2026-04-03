@@ -4,6 +4,7 @@ import {
   ApplicationMenu,
 } from "electrobun/bun";
 import type { AppRPC } from "shared/rpc-types";
+import { rpcRequestHandlers } from "./rpc-handlers";
 
 async function getMainViewUrl(): Promise<string> {
   try {
@@ -35,9 +36,7 @@ ApplicationMenu.setApplicationMenu([
 
 const rpc = BrowserView.defineRPC<AppRPC>({
   handlers: {
-    requests: {
-      ping: () => "pong",
-    },
+    requests: rpcRequestHandlers,
     messages: {
       log: ({ msg }) => {
         console.log("[webview]:", msg);
