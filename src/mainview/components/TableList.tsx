@@ -1,8 +1,14 @@
+import { Icon, IconPaths } from "./Icon";
+import { Tooltip } from "./Tooltip";
+import { Button } from "./Button";
+import { Title } from "./Title";
+
 interface TableListProps {
   tables: string[];
   selectedTable: string | null;
   loading: boolean;
   error: string | null;
+  cachedAt: string | null;
   onSelectTable: (name: string) => void;
   onRefresh: () => void;
 }
@@ -12,34 +18,28 @@ export function TableList({
   selectedTable,
   loading,
   error,
+  cachedAt,
   onSelectTable,
   onRefresh,
 }: TableListProps) {
   return (
-    <div className="bg-gray-900/50 border-r border-gray-800 flex flex-col overflow-hidden">
+    <div className="bg-gray-900/50 border-r border-gray-800 flex flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          Tables
-        </span>
-        <button
-          onClick={onRefresh}
-          className="p-1 text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded transition-colors cursor-pointer"
-          title="Refresh tables"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fillRule="evenodd"
-              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
+        <Title>Tables</Title>
+        <div className="flex items-center gap-0.5">
+          {cachedAt && (
+            <Tooltip text={`Cached · ${new Date(cachedAt).toLocaleString()}`}>
+              <span className="p-1 text-amber-400 flex items-center cursor-default">
+                <Icon size={13}>{IconPaths.clock}</Icon>
+              </span>
+            </Tooltip>
+          )}
+          <Button.Container variant="ghost" onClick={onRefresh} title="Refresh tables">
+            <Button.Icon>
+              <Icon size={14}>{IconPaths.refresh}</Icon>
+            </Button.Icon>
+          </Button.Container>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
