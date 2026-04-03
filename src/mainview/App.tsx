@@ -4,6 +4,7 @@ import { Navbar } from "./components/Navbar";
 import { TableList } from "./components/TableList";
 import { MainContent } from "./components/MainContent";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { useTheme } from "./theme/ThemeProvider";
 
 const STORAGE_REGION = "ddbflow:region";
 const STORAGE_TABLES = "ddbflow:tables-cache";
@@ -23,6 +24,7 @@ function loadTablesCache(): { tables: string[]; fetchedAt: string } | null {
 }
 
 export function App() {
+  const t = useTheme();
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [tablesLoading, setTablesLoading] = useState(false);
@@ -101,7 +103,7 @@ export function App() {
   }, [loadTables]);
 
   return (
-    <div className="h-screen w-screen bg-gray-950 text-gray-100 grid grid-rows-[3rem_1fr] grid-cols-[16rem_1fr]">
+    <div className={`h-screen w-screen ${t.bg.base} ${t.text.primary} grid grid-rows-[3rem_1fr] grid-cols-[16rem_1fr]`}>
       <Navbar credentialStatus={connectionStatus} onToggleSettings={() => setSettingsOpen((o) => !o)} />
       <TableList
         tables={tables}

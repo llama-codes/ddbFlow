@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTheme } from "../theme/ThemeProvider";
 
 interface TitleProps {
   children: ReactNode;
@@ -6,8 +7,9 @@ interface TitleProps {
 }
 
 export function Title({ children, bold = false }: TitleProps) {
+  const t = useTheme();
   return (
-    <span className={`text-xs uppercase tracking-wider ${bold ? "font-bold text-gray-100" : "font-semibold text-gray-400"}`}>
+    <span className={`text-xs uppercase tracking-wider ${bold ? `font-bold ${t.text.primary}` : `font-semibold ${t.text.muted}`}`}>
       {children}
     </span>
   );

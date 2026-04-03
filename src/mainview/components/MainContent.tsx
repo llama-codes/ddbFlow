@@ -1,24 +1,19 @@
+import { Icon, IconPaths } from "./Icon";
+import { useTheme } from "../theme/ThemeProvider";
+
 interface MainContentProps {
   selectedTable: string | null;
 }
 
 export function MainContent({ selectedTable }: MainContentProps) {
+  const t = useTheme();
+
   if (!selectedTable) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-500">
-        <svg
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className="mb-4 text-gray-600"
-        >
-          <ellipse cx="12" cy="6" rx="9" ry="3" />
-          <path d="M3 6v6c0 1.657 4.03 3 9 3s9-1.343 9-3V6" />
-          <path d="M3 12v6c0 1.657 4.03 3 9 3s9-1.343 9-3v-6" />
-        </svg>
+      <div className={`flex flex-col items-center justify-center h-full ${t.text.faint}`}>
+        <Icon size={48} className={`mb-4 ${t.text.faint}`}>
+          {IconPaths.database}
+        </Icon>
         <p className="text-sm">Select a table to view its data</p>
       </div>
     );
@@ -26,10 +21,8 @@ export function MainContent({ selectedTable }: MainContentProps) {
 
   return (
     <div className="p-6 overflow-y-auto">
-      <h2 className="text-xl font-semibold text-gray-100">{selectedTable}</h2>
-      <p className="mt-2 text-sm text-gray-500">
-        Item viewer coming soon
-      </p>
+      <h2 className={`text-xl font-semibold ${t.text.primary}`}>{selectedTable}</h2>
+      <p className={`mt-2 text-sm ${t.text.faint}`}>Item viewer coming soon</p>
     </div>
   );
 }
