@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Icon, IconPaths } from "./Icon";
-import { Tooltip } from "./Tooltip";
-import { Button } from "./Button";
-import { Title } from "./Title";
-import { useTheme } from "../theme/ThemeProvider";
+import { Icon, IconPaths } from "../../components/Icon";
+import { Tooltip } from "../../components/Tooltip";
+import { Button } from "../../components/Button";
+import { Title } from "../../components/Title";
+import { useTheme } from "../../theme/ThemeProvider";
 
 interface TableListProps {
   tables: string[];

@@ -1,8 +1,8 @@
-import { Icon, IconPaths } from "./Icon";
-import { Tooltip } from "./Tooltip";
-import { Button } from "./Button";
+import { Icon, IconPaths } from "../../components/Icon";
+import { Tooltip } from "../../components/Tooltip";
+import { Button } from "../../components/Button";
 import { DataGrid } from "./DataGrid";
-import { useTheme } from "../theme/ThemeProvider";
+import { useTheme } from "../../theme/ThemeProvider";
 import type { QueryResult, TableInfo } from "shared/schemas";
 
 interface MainContentProps {

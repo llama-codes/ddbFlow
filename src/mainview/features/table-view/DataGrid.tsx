@@ -6,11 +6,11 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { useMemo } from "react";
-import { useTheme } from "../theme/ThemeProvider";
+import { useTheme } from "../../theme/ThemeProvider";
 import type { KeySchemaElement } from "shared/schemas";
-import { Tooltip } from "./Tooltip";
-import { Button } from "./Button";
-import { Icon, IconPaths } from "./Icon";
+import { Tooltip } from "../../components/Tooltip";
+import { Button } from "../../components/Button";
+import { Icon, IconPaths } from "../../components/Icon";
 
 type Row = Record<string, unknown>;
 

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { rpc } from "./lib/electrobun";
 import { Navbar } from "./components/Navbar";
-import { TableList } from "./components/TableList";
-import { MainContent } from "./components/MainContent";
-import { SettingsPanel } from "./components/SettingsPanel";
+import { TableList } from "./features/sidebar/TableList";
+import { MainContent } from "./features/table-view/MainContent";
+import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { useTheme } from "./theme/ThemeProvider";
 import type { QueryResult, TableInfo } from "shared/schemas";
 

@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { Button } from "./Button";
-import { Icon, IconPaths } from "./Icon";
-import { Title } from "./Title";
-import { Description } from "./Description";
-import { useTheme } from "../theme/ThemeProvider";
+import { Button } from "../../components/Button";
+import { Icon, IconPaths } from "../../components/Icon";
+import { Title } from "../../components/Title";
+import { Description } from "../../components/Description";
+import { useTheme } from "../../theme/ThemeProvider";
 
 const AWS_REGIONS = [
   "us-east-1",
