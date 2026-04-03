@@ -10,6 +10,10 @@ export type AppRPC = {
       describeTable: { params: { tableName: string }; response: TableInfo };
       scan: { params: ScanParams; response: QueryResult };
       query: { params: QueryParams; response: QueryResult };
+      readCache: { params: { key: string }; response: string | null };
+      writeCache: { params: { key: string; value: string }; response: string };
+      deleteCache: { params: { key: string }; response: string };
+      purgeCache: { params: Record<string, never>; response: string };
     };
     messages: {
       log: { msg: string };

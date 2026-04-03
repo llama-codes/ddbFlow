@@ -27,6 +27,7 @@ interface SettingsPanelProps {
   connectionStatus: "unknown" | "connected" | "error";
   checkingConnection: boolean;
   onCheckConnection: () => void;
+  onPurgeCache: () => void;
 }
 
 export function SettingsPanel({
@@ -37,6 +38,7 @@ export function SettingsPanel({
   connectionStatus,
   checkingConnection,
   onCheckConnection,
+  onPurgeCache,
 }: SettingsPanelProps) {
   const t = useTheme();
 
@@ -79,6 +81,13 @@ export function SettingsPanel({
             <StatusIndicator status={connectionStatus} />
             <Button.Container className="w-full justify-center" onClick={onCheckConnection} disabled={checkingConnection}>
               <Button.Text>{checkingConnection ? "Checking..." : "Check Connection"}</Button.Text>
+            </Button.Container>
+          </div>
+          <div className={`space-y-2 pt-4 border-t ${t.border.base}`}>
+            <Title>Cache</Title>
+            <Description>Clear all locally cached table and scan data</Description>
+            <Button.Container className="w-full justify-center" onClick={onPurgeCache}>
+              <Button.Text>Purge all cache</Button.Text>
             </Button.Container>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { rpc } from "./lib/electrobun";
+import { cacheGet, cacheSet, cacheDel, cachePurge } from "./lib/cache";
 import { Navbar } from "./components/Navbar";
 import { TableList } from "./features/sidebar/TableList";
 import { MainContent } from "./features/table-view/MainContent";
@@ -7,54 +8,10 @@ import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { useTheme } from "./theme/ThemeProvider";
 import type { QueryResult, TableInfo } from "shared/schemas";
 
-const STORAGE_REGION = "ddbflow:region";
-const STORAGE_TABLES = "ddbflow:tables-cache";
-
-function scanCacheKey(tableName: string) {
-  return `ddbflow:scan:${tableName}`;
-}
-
-function loadTablesCache(): { tables: string[]; fetchedAt: string } | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_TABLES);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed.tables) && typeof parsed.fetchedAt === "string") {
-      return parsed;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function schemaCacheKey(tableName: string) {
-  return `ddbflow:schema:${tableName}`;
-}
-
-function loadSchemaCache(tableName: string): { info: TableInfo; fetchedAt: string } | null {
-  try {
-    const raw = localStorage.getItem(schemaCacheKey(tableName));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.info && typeof parsed.fetchedAt === "string") return parsed;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function loadScanCache(tableName: string): { result: QueryResult; fetchedAt: string } | null {
-  try {
-    const raw = localStorage.getItem(scanCacheKey(tableName));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.result && typeof parsed.fetchedAt === "string") return parsed;
-    return null;
-  } catch {
-    return null;
-  }
-}
+const CACHE_REGION = "ddbflow:region";
+const CACHE_TABLES = "ddbflow:tables-cache";
+const CACHE_SCHEMA = (t: string) => `ddbflow:schema:${t}`;
+const CACHE_SCAN = (t: string) => `ddbflow:scan:${t}`;
 
 export function App() {
   const t = useTheme();
@@ -77,12 +34,8 @@ export function App() {
 
   // Settings state
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [region, setRegion] = useState(
-    () => localStorage.getItem(STORAGE_REGION) ?? "us-east-1"
-  );
-  const [connectionStatus, setConnectionStatus] = useState<
-    "unknown" | "connected" | "error"
-  >("unknown");
+  const [region, setRegion] = useState("us-east-1");
+  const [connectionStatus, setConnectionStatus] = useState<"unknown" | "connected" | "error">("unknown");
   const [checkingConnection, setCheckingConnection] = useState(false);
 
   const loadTables = useCallback(async () => {
@@ -93,7 +46,7 @@ export function App() {
       const fetchedAt = new Date().toISOString();
       setTables(response);
       setTablesCachedAt(fetchedAt);
-      localStorage.setItem(STORAGE_TABLES, JSON.stringify({ tables: response, fetchedAt }));
+      cacheSet(CACHE_TABLES, { tables: response, fetchedAt }).catch(() => {});
       rpc.send.log({ msg: `listTables returned ${response.length} tables` });
     } catch (e) {
       setTablesError(e instanceof Error ? e.message : String(e));
@@ -103,12 +56,12 @@ export function App() {
   }, []);
 
   const loadSchema = useCallback(async (tableName: string) => {
-    const cache = loadSchemaCache(tableName);
-    if (cache) { setTableInfo(cache.info); return; }
+    const cached = await cacheGet<{ info: TableInfo; fetchedAt: string }>(CACHE_SCHEMA(tableName));
+    if (cached) { setTableInfo(cached.info); return; }
     try {
       const info = await rpc.request.describeTable({ tableName });
       setTableInfo(info);
-      localStorage.setItem(schemaCacheKey(tableName), JSON.stringify({ info, fetchedAt: new Date().toISOString() }));
+      cacheSet(CACHE_SCHEMA(tableName), { info, fetchedAt: new Date().toISOString() }).catch(() => {});
     } catch { /* non-fatal */ }
   }, []);
 
@@ -120,7 +73,7 @@ export function App() {
       const fetchedAt = new Date().toISOString();
       setScanResult(response);
       setScanCachedAt(fetchedAt);
-      localStorage.setItem(scanCacheKey(tableName), JSON.stringify({ result: response, fetchedAt }));
+      cacheSet(CACHE_SCAN(tableName), { result: response, fetchedAt }).catch(() => {});
     } catch (e) {
       setScanError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -144,7 +97,7 @@ export function App() {
         count: prev.count + response.count,
         scannedCount: prev.scannedCount + response.scannedCount,
       } : response);
-      setScanCachedAt(null); // no longer a clean cache
+      setScanCachedAt(null);
     } catch (e) {
       setScanError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -152,7 +105,7 @@ export function App() {
     }
   }, [selectedTable, scanResult]);
 
-  const handleSelectTable = useCallback((tableName: string) => {
+  const handleSelectTable = useCallback(async (tableName: string) => {
     setSelectedTable(tableName);
     setTableInfo(null);
     setScanResult(null);
@@ -161,10 +114,10 @@ export function App() {
 
     loadSchema(tableName);
 
-    const cache = loadScanCache(tableName);
-    if (cache) {
-      setScanResult(cache.result);
-      setScanCachedAt(cache.fetchedAt);
+    const cached = await cacheGet<{ result: QueryResult; fetchedAt: string }>(CACHE_SCAN(tableName));
+    if (cached) {
+      setScanResult(cached.result);
+      setScanCachedAt(cached.fetchedAt);
     } else {
       loadScan(tableName);
     }
@@ -172,19 +125,30 @@ export function App() {
 
   const handleRefreshScan = useCallback(() => {
     if (!selectedTable) return;
-    localStorage.removeItem(scanCacheKey(selectedTable));
+    cacheDel(CACHE_SCAN(selectedTable)).catch(() => {});
     setScanCachedAt(null);
     loadScan(selectedTable);
   }, [selectedTable, loadScan]);
 
   const handleRegionChange = useCallback(async (newRegion: string) => {
-    localStorage.setItem(STORAGE_REGION, newRegion);
     setRegion(newRegion);
-    localStorage.removeItem(STORAGE_TABLES);
     setTablesCachedAt(null);
+    cacheSet(CACHE_REGION, newRegion).catch(() => {});
+    cacheDel(CACHE_TABLES).catch(() => {});
     await rpc.request.setRegion({ region: newRegion });
     loadTables();
   }, [loadTables]);
+
+  const handlePurgeCache = useCallback(async () => {
+    await cachePurge();
+    setTables([]);
+    setTablesCachedAt(null);
+    setSelectedTable(null);
+    setTableInfo(null);
+    setScanResult(null);
+    setScanCachedAt(null);
+    setScanError(null);
+  }, []);
 
   const checkConnection = useCallback(async () => {
     setCheckingConnection(true);
@@ -199,22 +163,26 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    const persistedRegion = localStorage.getItem(STORAGE_REGION) ?? "us-east-1";
-    if (persistedRegion !== "us-east-1") {
-      rpc.request.setRegion({ region: persistedRegion });
-    }
+    async function init() {
+      const cachedRegion = await cacheGet<string>(CACHE_REGION);
+      if (cachedRegion) {
+        setRegion(cachedRegion);
+        await rpc.request.setRegion({ region: cachedRegion });
+      }
 
-    const cache = loadTablesCache();
-    if (cache) {
-      setTables(cache.tables);
-      setTablesCachedAt(cache.fetchedAt);
-    } else {
-      loadTables();
-    }
+      const tablesCache = await cacheGet<{ tables: string[]; fetchedAt: string }>(CACHE_TABLES);
+      if (tablesCache) {
+        setTables(tablesCache.tables);
+        setTablesCachedAt(tablesCache.fetchedAt);
+      } else {
+        loadTables();
+      }
 
-    rpc.request.ping({})
-      .then(() => setConnectionStatus("connected"))
-      .catch(() => setConnectionStatus("error"));
+      rpc.request.ping({})
+        .then(() => setConnectionStatus("connected"))
+        .catch(() => setConnectionStatus("error"));
+    }
+    init();
   }, [loadTables]);
 
   return (
@@ -247,6 +215,7 @@ export function App() {
         connectionStatus={connectionStatus}
         checkingConnection={checkingConnection}
         onCheckConnection={checkConnection}
+        onPurgeCache={handlePurgeCache}
       />
     </div>
   );

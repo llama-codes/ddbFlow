@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import { DynamoClient, DynamoClientLive, makeDynamoClientLive } from "./services/DynamoClient";
 import * as TableService from "./services/TableService";
 import * as QueryService from "./services/QueryService";
+import * as CacheService from "./services/CacheService";
 import type { ScanParams, QueryParams } from "shared/schemas";
 
 type AnyDynamoEffect<A> = Effect.Effect<A, unknown, DynamoClient>;
@@ -24,4 +25,11 @@ export const rpcRequestHandlers = {
     console.log("[setRegion] switched to region:", params.region);
     return params.region;
   },
+  readCache: (params: { key: string }) => CacheService.readCache(params.key),
+  writeCache: (params: { key: string; value: string }) =>
+    CacheService.writeCache(params.key, params.value).then(() => "ok"),
+  deleteCache: (params: { key: string }) =>
+    CacheService.deleteCache(params.key).then(() => "ok"),
+  purgeCache: (_params: Record<string, never>) =>
+    CacheService.purgeCache().then(() => "ok"),
 };
