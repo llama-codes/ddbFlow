@@ -8,6 +8,8 @@ export const darkTheme = {
     overlay: "bg-black/50",
     selectedAccent: "bg-blue-600/20",
     warningAccent: "bg-amber-400/10",
+    partitionKeyAccent: "bg-blue-400/10",
+    sortKeyAccent: "bg-purple-400/10",
   },
   text: {
     primary: "text-gray-100",
@@ -19,6 +21,7 @@ export const darkTheme = {
     error: "text-red-400",
     errorDim: "text-red-400/70",
     warning: "text-amber-400",
+    sortKey: "text-purple-400",
   },
   border: {
     base: "border-gray-800",
@@ -26,6 +29,8 @@ export const darkTheme = {
     brand: "border-blue-400",
     transparent: "border-transparent",
     warningAccent: "border-amber-400/30",
+    partitionKeyAccent: "border-blue-400/20",
+    sortKeyAccent: "border-purple-400/20",
   },
   dot: {
     success: "bg-green-400",
@@ -47,6 +52,11 @@ export const darkTheme = {
   listItem: {
     base: "text-gray-300 hover:bg-gray-800 border-l-2 border-transparent",
     selected: "bg-blue-600/20 text-blue-400 border-l-2 border-blue-400",
+  },
+  tableRow: {
+    even: "bg-gray-950",
+    odd: "bg-gray-900/50",
+    hover: "hover:bg-gray-800 transition-colors",
   },
 } as const;
 

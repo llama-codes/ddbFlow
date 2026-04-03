@@ -28,6 +28,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1023.0",
     "@aws-sdk/lib-dynamodb": "^3.1023.0",
+    "@tanstack/react-table": "^8.21.3",
     "effect": "^3.21.0",
     "electrobun": "^1.16.0"
   }
