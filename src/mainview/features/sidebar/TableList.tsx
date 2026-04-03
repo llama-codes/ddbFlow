@@ -3,6 +3,7 @@ import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
 import { Button } from "../../components/Button";
 import { Title } from "../../components/Title";
+import { SearchInput } from "../../components/SearchInput";
 import { ListItem } from "./ListItem";
 import { useTheme } from "../../theme/ThemeProvider";
 
@@ -53,12 +54,10 @@ export function TableList({
       </div>
 
       <div className={`px-2 py-1.5 border-b ${t.border.base}`}>
-        <input
-          type="text"
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder="Filter tables…"
-          className={`w-full text-xs ${t.input.base} rounded px-2 py-1.5 placeholder:${t.text.faint}`}
         />
       </div>
 
