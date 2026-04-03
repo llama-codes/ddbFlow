@@ -3,6 +3,8 @@ import { Button } from "../../components/Button";
 import { Icon, IconPaths } from "../../components/Icon";
 import { Title } from "../../components/Title";
 import { Description } from "../../components/Description";
+import { StatusIndicator } from "../../components/StatusIndicator";
+import { Dropdown } from "../../components/Dropdown";
 import { useTheme } from "../../theme/ThemeProvider";
 
 const AWS_REGIONS = [
@@ -49,24 +51,6 @@ export function SettingsPanel({
 
   if (!open) return null;
 
-  const statusText = {
-    connected: "Connected",
-    error: "Not connected",
-    unknown: "Not checked",
-  }[connectionStatus];
-
-  const statusTextClass = {
-    connected: t.text.success,
-    error: t.text.error,
-    unknown: t.text.faint,
-  }[connectionStatus];
-
-  const statusDotClass = {
-    connected: t.dot.success,
-    error: t.dot.error,
-    unknown: t.dot.unknown,
-  }[connectionStatus];
-
   return (
     <>
       <div className={`fixed inset-0 ${t.bg.overlay} z-40`} onClick={onClose} />
@@ -81,24 +65,18 @@ export function SettingsPanel({
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           <div className="space-y-2">
             <Title>AWS Region</Title>
-            <select
+            <Dropdown
+              options={AWS_REGIONS.map((r) => ({ value: r, label: r }))}
               value={region}
-              onChange={(e) => onRegionChange(e.target.value)}
-              className={`w-full ${t.input.base} rounded px-3 py-2 text-sm`}
-            >
-              {AWS_REGIONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+              onChange={onRegionChange}
+              className="w-full"
+            />
             <Description>Changes take effect immediately</Description>
           </div>
 
           <div className="space-y-2">
             <Title>AWS Credentials</Title>
-            <div className="flex items-center gap-2">
-              <span className={`inline-block w-2 h-2 rounded-full ${statusDotClass}`} />
-              <span className={`text-sm ${statusTextClass}`}>{statusText}</span>
-            </div>
+            <StatusIndicator status={connectionStatus} />
             <Button.Container className="w-full justify-center" onClick={onCheckConnection} disabled={checkingConnection}>
               <Button.Text>{checkingConnection ? "Checking..." : "Check Connection"}</Button.Text>
             </Button.Container>

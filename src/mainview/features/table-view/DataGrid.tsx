@@ -11,6 +11,7 @@ import type { KeySchemaElement } from "shared/schemas";
 import { Tooltip } from "../../components/Tooltip";
 import { Button } from "../../components/Button";
 import { Icon, IconPaths } from "../../components/Icon";
+import { Dropdown } from "../../components/Dropdown";
 
 type Row = Record<string, unknown>;
 
@@ -151,15 +152,12 @@ export function DataGrid({ items, tableKeys, hasNextPage, loadingNextPage, onLoa
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <select
+          <Dropdown
+            size="sm"
+            options={PAGE_SIZES.map((s) => ({ value: s, label: `${s} / page` }))}
             value={pageSize}
-            onChange={(e) => { table.setPageSize(Number(e.target.value)); table.setPageIndex(0); }}
-            className={`text-xs ${t.input.base} rounded px-2 py-1`}
-          >
-            {PAGE_SIZES.map((s) => (
-              <option key={s} value={s}>{s} / page</option>
-            ))}
-          </select>
+            onChange={(v) => { table.setPageSize(Number(v)); table.setPageIndex(0); }}
+          />
           {isLastClientPage && hasNextPage && (
             <Button.Container
               variant="sm"
