@@ -128,6 +128,30 @@ export function App() {
     }
   }, []);
 
+  const loadNextScanPage = useCallback(async () => {
+    if (!selectedTable || !scanResult?.lastEvaluatedKey) return;
+    setScanLoading(true);
+    setScanError(null);
+    try {
+      const response = await rpc.request.scan({
+        tableName: selectedTable,
+        limit: 100,
+        exclusiveStartKey: scanResult.lastEvaluatedKey,
+      });
+      setScanResult((prev) => prev ? {
+        ...response,
+        items: [...prev.items, ...response.items],
+        count: prev.count + response.count,
+        scannedCount: prev.scannedCount + response.scannedCount,
+      } : response);
+      setScanCachedAt(null); // no longer a clean cache
+    } catch (e) {
+      setScanError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setScanLoading(false);
+    }
+  }, [selectedTable, scanResult]);
+
   const handleSelectTable = useCallback((tableName: string) => {
     setSelectedTable(tableName);
     setTableInfo(null);
@@ -213,6 +237,7 @@ export function App() {
         scanError={scanError}
         scanCachedAt={scanCachedAt}
         onRefreshScan={handleRefreshScan}
+        onLoadNextPage={loadNextScanPage}
       />
       <SettingsPanel
         open={settingsOpen}

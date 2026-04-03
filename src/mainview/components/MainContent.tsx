@@ -13,6 +13,7 @@ interface MainContentProps {
   scanError: string | null;
   scanCachedAt: string | null;
   onRefreshScan: () => void;
+  onLoadNextPage: () => void;
 }
 
 export function MainContent({
@@ -23,6 +24,7 @@ export function MainContent({
   scanError,
   scanCachedAt,
   onRefreshScan,
+  onLoadNextPage,
 }: MainContentProps) {
   const t = useTheme();
 
@@ -87,7 +89,13 @@ export function MainContent({
               <p className="text-sm">No items found</p>
             </div>
           ) : (
-            <DataGrid items={scanResult.items} tableKeys={tableInfo?.keys ?? []} />
+            <DataGrid
+              items={scanResult.items}
+              tableKeys={tableInfo?.keys ?? []}
+              hasNextPage={!!scanResult.lastEvaluatedKey}
+              loadingNextPage={scanLoading}
+              onLoadNextPage={onLoadNextPage}
+            />
           )
         )}
       </div>
