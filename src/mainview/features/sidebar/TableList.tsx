@@ -7,27 +7,14 @@ import { Title } from "../../components/Title";
 import { SearchInput } from "../../components/SearchInput";
 import { ListItem } from "./ListItem";
 import { useTheme } from "../../theme/ThemeProvider";
+import { useTablesCtx } from "../../hooks/TablesContext";
+import { useTableDataCtx } from "../../hooks/TableDataContext";
 
-interface TableListProps {
-  tables: string[];
-  selectedTable: string | null;
-  loading: boolean;
-  error: string | null;
-  cachedAt: string | null;
-  onSelectTable: (name: string) => void;
-  onRefresh: () => void;
-}
-
-export function TableList({
-  tables,
-  selectedTable,
-  loading,
-  error,
-  cachedAt,
-  onSelectTable,
-  onRefresh,
-}: TableListProps) {
+export function TableList() {
   const t = useTheme();
+  const { tables, tablesLoading, tablesError, tablesCachedAt, loadTables } = useTablesCtx();
+  const { selectedTable, selectTable } = useTableDataCtx();
+
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -55,13 +42,13 @@ export function TableList({
             </Button.Container>
           </Tooltip>
           <Tooltip text="Refresh tables">
-            <Button.Container variant="ghost" onClick={onRefresh}>
+            <Button.Container variant="ghost" onClick={loadTables}>
               <Button.Icon>
                 <Icon size={14}>{IconPaths.refresh}</Icon>
               </Button.Icon>
             </Button.Container>
           </Tooltip>
-          <CacheIndicator cachedAt={cachedAt} />
+          <CacheIndicator cachedAt={tablesCachedAt} />
         </div>
       </div>
 
@@ -76,23 +63,23 @@ export function TableList({
       )}
 
       <div className="flex-1 overflow-y-auto">
-        {loading && (
+        {tablesLoading && (
           <p className={`px-3 py-4 text-sm ${t.text.faint} animate-pulse`}>
             Loading tables...
           </p>
         )}
 
-        {error && (
+        {tablesError && (
           <div className={`px-3 py-3`}>
             <div className="flex items-start gap-2">
               <Icon size={16} className={`${t.text.error} shrink-0 mt-0.5`}>{IconPaths.warning}</Icon>
               <div className="flex-1 min-w-0">
                 <p className={`text-xs font-medium ${t.text.primary}`}>Failed to load</p>
-                <p className={`text-xs ${t.text.muted} mt-1 break-words`}>{error}</p>
+                <p className={`text-xs ${t.text.muted} mt-1 break-words`}>{tablesError}</p>
                 <button
                   type="button"
                   className={`mt-2 text-xs ${t.text.brand} hover:underline cursor-pointer`}
-                  onClick={onRefresh}
+                  onClick={loadTables}
                 >
                   Retry
                 </button>
@@ -101,20 +88,20 @@ export function TableList({
           </div>
         )}
 
-        {!loading && !error && filtered.length === 0 && (
+        {!tablesLoading && !tablesError && filtered.length === 0 && (
           <p className={`px-3 py-4 text-sm ${t.text.faint}`}>
             {search.trim() ? "No matches" : "No tables found"}
           </p>
         )}
 
-        {!loading && filtered.length > 0 && (
+        {!tablesLoading && filtered.length > 0 && (
           <ul>
             {filtered.map((table) => (
               <li key={table}>
                 <ListItem
                   label={table}
                   selected={table === selectedTable}
-                  onClick={() => onSelectTable(table)}
+                  onClick={() => selectTable(table)}
                 />
               </li>
             ))}

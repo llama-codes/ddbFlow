@@ -6,6 +6,7 @@ import { Description } from "../../components/Description";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { Dropdown } from "../../components/Dropdown";
 import { useTheme } from "../../theme/ThemeProvider";
+import { useSettingsCtx } from "../../hooks/SettingsContext";
 
 const AWS_REGIONS = [
   "us-east-1",
@@ -22,50 +23,36 @@ const AWS_REGIONS = [
 const SCAN_LIMIT_OPTIONS = [25, 50, 100, 250, 500, 1000];
 
 interface SettingsPanelProps {
-  open: boolean;
-  onClose: () => void;
-  region: string;
   onRegionChange: (region: string) => void;
-  scanLimit: number;
-  onScanLimitChange: (limit: number) => void;
-  connectionStatus: "unknown" | "connected" | "error";
-  checkingConnection: boolean;
-  onCheckConnection: () => void;
   onPurgeCache: () => void;
 }
 
-export function SettingsPanel({
-  open,
-  onClose,
-  region,
-  onRegionChange,
-  scanLimit,
-  onScanLimitChange,
-  connectionStatus,
-  checkingConnection,
-  onCheckConnection,
-  onPurgeCache,
-}: SettingsPanelProps) {
+export function SettingsPanel({ onRegionChange, onPurgeCache }: SettingsPanelProps) {
   const t = useTheme();
+  const {
+    settingsOpen, closeSettings,
+    region, scanLimit, handleScanLimitChange,
+    connectionStatus, checkingConnection, checkConnection,
+  } = useSettingsCtx();
 
   useEffect(() => {
-    if (!open) return;
+    if (!settingsOpen) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") closeSettings();
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [open, onClose]);
+  }, [settingsOpen, closeSettings]);
 
-  if (!open) return null;
+  if (!settingsOpen) return null;
 
   return (
     <>
-      <div className={`fixed inset-0 ${t.bg.overlay} z-40`} onClick={onClose} />
+      <div className={`fixed inset-0 ${t.bg.overlay} z-40`} onClick={closeSettings} />
       <div className={`fixed top-0 right-0 h-full w-80 ${t.bg.surface} border-l ${t.border.base} z-50 flex flex-col`}>
         <div className={`flex items-center justify-between px-4 py-3 border-b ${t.border.base}`}>
           <Title bold>Settings</Title>
-          <Button.Container variant="ghost" onClick={onClose}>
+          <Button.Container variant="ghost" onClick={closeSettings}>
             <Button.Icon><Icon size={16}>{IconPaths.close}</Icon></Button.Icon>
           </Button.Container>
         </div>
@@ -87,7 +74,7 @@ export function SettingsPanel({
             <Dropdown
               options={SCAN_LIMIT_OPTIONS.map((n) => ({ value: String(n), label: `${n} items` }))}
               value={String(scanLimit)}
-              onChange={(v) => onScanLimitChange(Number(v))}
+              onChange={(v) => handleScanLimitChange(Number(v))}
               className="w-full"
             />
             <Description>Max items fetched per scan request</Description>
@@ -96,7 +83,7 @@ export function SettingsPanel({
           <div className="space-y-2">
             <Title>AWS Credentials</Title>
             <StatusIndicator status={connectionStatus} />
-            <Button.Container className="w-full justify-center" onClick={onCheckConnection} disabled={checkingConnection}>
+            <Button.Container className="w-full justify-center" onClick={checkConnection} disabled={checkingConnection}>
               <Button.Text>{checkingConnection ? "Checking..." : "Check Connection"}</Button.Text>
             </Button.Container>
           </div>

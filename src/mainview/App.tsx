@@ -7,18 +7,16 @@ import { TableList } from "./features/sidebar/TableList";
 import { MainContent } from "./features/table-view/MainContent";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { useTheme } from "./theme/ThemeProvider";
-import { useTables } from "./hooks/useTables";
-import { useTableData } from "./hooks/useTableData";
-import { useSettings } from "./hooks/useSettings";
+import { SettingsProvider, useSettingsCtx } from "./hooks/SettingsContext";
+import { TablesProvider, useTablesCtx } from "./hooks/TablesContext";
+import { TableDataProvider, useTableDataCtx } from "./hooks/TableDataContext";
 
-export function App() {
+function AppLayout() {
   const t = useTheme();
+  const settings = useSettingsCtx();
+  const tables = useTablesCtx();
+  const tableData = useTableDataCtx();
 
-  const settings = useSettings();
-  const tables = useTables();
-  const tableData = useTableData(settings.scanLimit);
-
-  // Cross-cutting: region change resets tables and refetches
   const handleRegionChange = useCallback(async (newRegion: string) => {
     settings.setRegion(newRegion);
     tables.resetTables();
@@ -28,14 +26,12 @@ export function App() {
     tables.loadTables();
   }, [settings, tables]);
 
-  // Cross-cutting: purge resets everything
   const handlePurgeCache = useCallback(async () => {
     await cachePurge();
     tables.resetTables();
     tableData.resetTableData();
   }, [tables, tableData]);
 
-  // Init: restore cached settings, tables, and check connection
   useEffect(() => {
     async function init() {
       await settings.restoreSettingsFromCache();
@@ -52,42 +48,43 @@ export function App() {
 
   return (
     <div className={`h-screen w-screen overflow-hidden ${t.bg.base} ${t.text.primary} grid grid-rows-[3rem_1fr] grid-cols-[16rem_1fr]`}>
-      <Navbar credentialStatus={settings.connectionStatus} onToggleSettings={settings.toggleSettings} />
-      <TableList
-        tables={tables.tables}
-        selectedTable={tableData.selectedTable}
-        loading={tables.tablesLoading}
-        error={tables.tablesError}
-        cachedAt={tables.tablesCachedAt}
-        onSelectTable={tableData.selectTable}
-        onRefresh={tables.loadTables}
-      />
-      <MainContent
-        selectedTable={tableData.selectedTable}
-        tableInfo={tableData.tableInfo}
-        scanResult={tableData.scanResult}
-        scanLoading={tableData.scanLoading}
-        scanError={tableData.scanError}
-        scanCachedAt={tableData.scanCachedAt}
-        scanSessions={tableData.scanSessions}
-        activeScanSessionKey={tableData.activeScanSessionKey}
-        onRefreshScan={tableData.refreshScan}
-        onLoadNextPage={tableData.loadNextScanPage}
-        onSelectSession={tableData.loadSession}
-        onDeleteSession={tableData.deleteSession}
-      />
+      <Navbar />
+      <TableList />
+      <MainContent />
       <SettingsPanel
-        open={settings.settingsOpen}
-        onClose={settings.closeSettings}
-        region={settings.region}
         onRegionChange={handleRegionChange}
-        scanLimit={settings.scanLimit}
-        onScanLimitChange={settings.handleScanLimitChange}
-        connectionStatus={settings.connectionStatus}
-        checkingConnection={settings.checkingConnection}
-        onCheckConnection={settings.checkConnection}
         onPurgeCache={handlePurgeCache}
       />
     </div>
+  );
+}
+
+function AppProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <SettingsProvider>
+      <TablesProvider>
+        <SettingsConsumer>
+          {(scanLimit) => (
+            <TableDataProvider scanLimit={scanLimit}>
+              {children}
+            </TableDataProvider>
+          )}
+        </SettingsConsumer>
+      </TablesProvider>
+    </SettingsProvider>
+  );
+}
+
+/** Bridges SettingsContext.scanLimit into TableDataProvider */
+function SettingsConsumer({ children }: { children: (scanLimit: number) => React.ReactNode }) {
+  const { scanLimit } = useSettingsCtx();
+  return <>{children(scanLimit)}</>;
+}
+
+export function App() {
+  return (
+    <AppProviders>
+      <AppLayout />
+    </AppProviders>
   );
 }

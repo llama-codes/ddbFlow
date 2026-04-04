@@ -11,41 +11,17 @@ import { SearchInput } from "../../components/SearchInput";
 import { useTheme } from "../../theme/ThemeProvider";
 import { cacheGet, cacheSet } from "../../lib/cache";
 import { formatValue } from "../../lib/format";
-import type { QueryResult, TableInfo } from "shared/schemas";
-import type { ScanSession } from "../../lib/cache-keys";
+import { useTableDataCtx } from "../../hooks/TableDataContext";
 
 const CACHE_COLVIS = (t: string) => `ddbflow:colvis:${t}`;
 
-interface MainContentProps {
-  selectedTable: string | null;
-  tableInfo: TableInfo | null;
-  scanResult: QueryResult | null;
-  scanLoading: boolean;
-  scanError: string | null;
-  scanCachedAt: string | null;
-  scanSessions: ScanSession[];
-  activeScanSessionKey: string | null;
-  onRefreshScan: () => void;
-  onLoadNextPage: () => void;
-  onSelectSession: (key: string) => void;
-  onDeleteSession: (key: string) => void;
-}
-
-export function MainContent({
-  selectedTable,
-  tableInfo,
-  scanResult,
-  scanLoading,
-  scanError,
-  scanCachedAt,
-  scanSessions,
-  activeScanSessionKey,
-  onRefreshScan,
-  onLoadNextPage,
-  onSelectSession,
-  onDeleteSession,
-}: MainContentProps) {
+export function MainContent() {
   const t = useTheme();
+  const {
+    selectedTable, tableInfo, scanResult, scanLoading, scanError, scanCachedAt,
+    scanSessions, activeScanSessionKey,
+    refreshScan, loadNextScanPage, loadSession, deleteSession,
+  } = useTableDataCtx();
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [visibilityLoaded, setVisibilityLoaded] = useState(false);
@@ -67,7 +43,6 @@ export function MainContent({
     return new Set(tableInfo.keys.map((k) => k.attributeName));
   }, [tableInfo]);
 
-  // Count how many GSIs / LSIs each attribute participates in
   const gsiCountMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const gsi of tableInfo?.gsis ?? []) {
@@ -117,7 +92,6 @@ export function MainContent({
     );
   }, [scanResult?.items, search, columnVisibility]);
 
-  // Load cached column visibility when table changes
   useEffect(() => {
     setColumnVisibility({});
     setVisibilityLoaded(false);
@@ -130,7 +104,6 @@ export function MainContent({
     });
   }, [selectedTable]);
 
-  // Persist column visibility changes
   useEffect(() => {
     if (!selectedTable || !visibilityLoaded) return;
     if (Object.keys(columnVisibility).length === 0) return;
@@ -192,12 +165,12 @@ export function MainContent({
           <SessionsDropdown
             sessions={scanSessions}
             activeSessionKey={activeScanSessionKey}
-            onSelectSession={onSelectSession}
-            onDeleteSession={onDeleteSession}
+            onSelectSession={loadSession}
+            onDeleteSession={deleteSession}
             disabled={scanLoading}
           />
           <Tooltip text="New session">
-            <Button.Container variant="ghost" onClick={onRefreshScan} disabled={scanLoading}>
+            <Button.Container variant="ghost" onClick={refreshScan} disabled={scanLoading}>
               <Button.Icon>
                 <Icon size={14}>{IconPaths.refresh}</Icon>
               </Button.Icon>
@@ -243,7 +216,7 @@ export function MainContent({
                     <button
                       type="button"
                       className={`text-xs px-2.5 py-1 rounded ${t.button.sm} cursor-pointer`}
-                      onClick={onRefreshScan}
+                      onClick={refreshScan}
                     >
                       Retry
                     </button>
@@ -271,7 +244,7 @@ export function MainContent({
               lsis={tableInfo?.lsis ?? []}
               hasNextPage={!!scanResult.lastEvaluatedKey}
               loadingNextPage={scanLoading}
-              onLoadNextPage={onLoadNextPage}
+              onLoadNextPage={loadNextScanPage}
               columnVisibility={columnVisibility}
             />
           )
