@@ -71,4 +71,11 @@ export const IconPaths = {
       <path d="M2 10v5c0 1.657 3.582 3 8 3s8-1.343 8-3v-5" />
     </>
   ),
+  columns: (
+    <path
+      fillRule="evenodd"
+      d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 1v10h3V5H5zm5 0v10h3V5h-3zm5 10V5h1v10h-1z"
+      clipRule="evenodd"
+    />
+  ),
 };

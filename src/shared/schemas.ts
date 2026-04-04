@@ -15,6 +15,12 @@ export interface GsiInfo {
   itemCount: number;
 }
 
+export interface LsiInfo {
+  indexName: string;
+  keys: KeySchemaElement[];
+  projectionType: string;
+}
+
 export interface TableInfo {
   name: string;
   status: string;
@@ -23,6 +29,7 @@ export interface TableInfo {
   keys: KeySchemaElement[];
   attributes: AttributeDefinition[];
   gsis: GsiInfo[];
+  lsis: LsiInfo[];
   billingMode: string;
   createdAt: string;
 }

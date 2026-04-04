@@ -10,6 +10,7 @@ import type {
   KeySchemaElement,
   AttributeDefinition,
   GsiInfo,
+  LsiInfo,
 } from "shared/schemas";
 
 export const listTables = Effect.gen(function* () {
@@ -80,6 +81,15 @@ export const describeTable = (tableName: string) =>
       itemCount: g.ItemCount ?? 0,
     }));
 
+    const lsis: LsiInfo[] = (table.LocalSecondaryIndexes ?? []).map((l) => ({
+      indexName: l.IndexName!,
+      keys: (l.KeySchema ?? []).map((k) => ({
+        attributeName: k.AttributeName!,
+        keyType: k.KeyType as "HASH" | "RANGE",
+      })),
+      projectionType: l.Projection?.ProjectionType ?? "ALL",
+    }));
+
     const info: TableInfo = {
       name: table.TableName!,
       status: table.TableStatus ?? "UNKNOWN",
@@ -88,6 +98,7 @@ export const describeTable = (tableName: string) =>
       keys,
       attributes,
       gsis,
+      lsis,
       billingMode: table.BillingModeSummary?.BillingMode ?? "PROVISIONED",
       createdAt: table.CreationDateTime?.toISOString() ?? "",
     };

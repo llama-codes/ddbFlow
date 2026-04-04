@@ -1,10 +1,16 @@
+import { useState, useEffect, useMemo, useCallback } from "react";
+import type { VisibilityState } from "@tanstack/react-table";
 import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
 import { Button } from "../../components/Button";
 import { CacheIndicator } from "../../components/CacheIndicator";
 import { DataGrid } from "./DataGrid";
+import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { useTheme } from "../../theme/ThemeProvider";
+import { cacheGet, cacheSet } from "../../lib/cache";
 import type { QueryResult, TableInfo } from "shared/schemas";
+
+const CACHE_COLVIS = (t: string) => `ddbflow:colvis:${t}`;
 
 interface MainContentProps {
   selectedTable: string | null;
@@ -29,6 +35,93 @@ export function MainContent({
 }: MainContentProps) {
   const t = useTheme();
 
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [visibilityLoaded, setVisibilityLoaded] = useState(false);
+
+  const hashKey = tableInfo?.keys.find((k) => k.keyType === "HASH")?.attributeName;
+  const rangeKey = tableInfo?.keys.find((k) => k.keyType === "RANGE")?.attributeName;
+
+  const protectedKeys = useMemo(() => {
+    if (!tableInfo?.keys) return new Set<string>();
+    return new Set(tableInfo.keys.map((k) => k.attributeName));
+  }, [tableInfo]);
+
+  // Count how many GSIs / LSIs each attribute participates in
+  const gsiCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const gsi of tableInfo?.gsis ?? []) {
+      for (const key of gsi.keys) {
+        map.set(key.attributeName, (map.get(key.attributeName) ?? 0) + 1);
+      }
+    }
+    return map;
+  }, [tableInfo]);
+
+  const lsiCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const lsi of tableInfo?.lsis ?? []) {
+      for (const key of lsi.keys) {
+        map.set(key.attributeName, (map.get(key.attributeName) ?? 0) + 1);
+      }
+    }
+    return map;
+  }, [tableInfo]);
+
+  const toggleableColumns = useMemo(() => {
+    if (!scanResult?.items.length) return [];
+    const allKeys = Array.from(new Set(scanResult.items.flatMap((item) => Object.keys(item))));
+    return allKeys.filter((k) => !protectedKeys.has(k));
+  }, [scanResult, protectedKeys]);
+
+  const dropdownColumns = useMemo(
+    () => toggleableColumns.map((id) => ({
+      id,
+      isVisible: columnVisibility[id] !== false,
+      keyType: id === hashKey ? "PK" as const : id === rangeKey ? "SK" as const : null,
+      gsiCount: gsiCountMap.get(id) ?? 0,
+      lsiCount: lsiCountMap.get(id) ?? 0,
+    })),
+    [toggleableColumns, columnVisibility, hashKey, rangeKey, gsiCountMap, lsiCountMap],
+  );
+
+  // Load cached column visibility when table changes
+  useEffect(() => {
+    setColumnVisibility({});
+    setVisibilityLoaded(false);
+    if (!selectedTable) return;
+    cacheGet<VisibilityState>(CACHE_COLVIS(selectedTable)).then((cached) => {
+      if (cached) setColumnVisibility(cached);
+      setVisibilityLoaded(true);
+    });
+  }, [selectedTable]);
+
+  // Persist column visibility changes
+  useEffect(() => {
+    if (!selectedTable || !visibilityLoaded) return;
+    if (Object.keys(columnVisibility).length === 0) return;
+    cacheSet(CACHE_COLVIS(selectedTable), columnVisibility).catch(() => {});
+  }, [columnVisibility, selectedTable, visibilityLoaded]);
+
+  const handleToggleColumn = useCallback((columnId: string) => {
+    setColumnVisibility((prev) => ({ ...prev, [columnId]: prev[columnId] === false ? true : false }));
+  }, []);
+
+  const handleShowAll = useCallback(() => {
+    setColumnVisibility((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) next[key] = true;
+      return next;
+    });
+  }, []);
+
+  const handleHideAll = useCallback(() => {
+    setColumnVisibility((prev) => {
+      const next = { ...prev };
+      for (const col of toggleableColumns) next[col] = false;
+      return next;
+    });
+  }, [toggleableColumns]);
+
   if (!selectedTable) {
     return (
       <div className={`flex flex-col items-center justify-center h-full ${t.text.faint}`}>
@@ -48,6 +141,12 @@ export function MainContent({
           <h2 className={`text-sm font-semibold ${t.text.primary}`}>{selectedTable}</h2>
         </div>
         <div className="flex items-center gap-1">
+          <ColumnVisibilityDropdown
+            columns={dropdownColumns}
+            onToggle={handleToggleColumn}
+            onShowAll={handleShowAll}
+            onHideAll={handleHideAll}
+          />
           <Tooltip text="Refresh data">
             <Button.Container variant="ghost" onClick={onRefreshScan} disabled={scanLoading}>
               <Button.Icon>
@@ -83,9 +182,12 @@ export function MainContent({
             <DataGrid
               items={scanResult.items}
               tableKeys={tableInfo?.keys ?? []}
+              gsis={tableInfo?.gsis ?? []}
+              lsis={tableInfo?.lsis ?? []}
               hasNextPage={!!scanResult.lastEvaluatedKey}
               loadingNextPage={scanLoading}
               onLoadNextPage={onLoadNextPage}
+              columnVisibility={columnVisibility}
             />
           )
         )}

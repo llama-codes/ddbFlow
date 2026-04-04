@@ -4,11 +4,13 @@ import {
   getPaginationRowModel,
   flexRender,
   type ColumnDef,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
-import type { KeySchemaElement } from "shared/schemas";
+import type { KeySchemaElement, GsiInfo, LsiInfo } from "shared/schemas";
 import { Tooltip } from "../../components/Tooltip";
+import { KeyBadge } from "../../components/KeyBadge";
 import { Button } from "../../components/Button";
 import { Icon, IconPaths } from "../../components/Icon";
 import { Dropdown } from "../../components/Dropdown";
@@ -27,19 +29,52 @@ function formatValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
+interface IndexMatch {
+  indexName: string;
+  keyType: "HASH" | "RANGE";
+}
+
 interface DataGridProps {
   items: Row[];
   tableKeys: KeySchemaElement[];
+  gsis: GsiInfo[];
+  lsis: LsiInfo[];
   hasNextPage: boolean;
   loadingNextPage: boolean;
   onLoadNextPage: () => void;
+  columnVisibility?: VisibilityState;
 }
 
-export function DataGrid({ items, tableKeys, hasNextPage, loadingNextPage, onLoadNextPage }: DataGridProps) {
+export function DataGrid({ items, tableKeys, gsis, lsis, hasNextPage, loadingNextPage, onLoadNextPage, columnVisibility }: DataGridProps) {
   const t = useTheme();
 
   const hashKey = tableKeys.find((k) => k.keyType === "HASH")?.attributeName;
   const rangeKey = tableKeys.find((k) => k.keyType === "RANGE")?.attributeName;
+
+  // Build maps: attributeName → list of indexes that use it as a key
+  const gsiMap = useMemo(() => {
+    const map = new Map<string, IndexMatch[]>();
+    for (const gsi of gsis) {
+      for (const key of gsi.keys) {
+        const existing = map.get(key.attributeName) ?? [];
+        existing.push({ indexName: gsi.indexName, keyType: key.keyType });
+        map.set(key.attributeName, existing);
+      }
+    }
+    return map;
+  }, [gsis]);
+
+  const lsiMap = useMemo(() => {
+    const map = new Map<string, IndexMatch[]>();
+    for (const lsi of lsis) {
+      for (const key of lsi.keys) {
+        const existing = map.get(key.attributeName) ?? [];
+        existing.push({ indexName: lsi.indexName, keyType: key.keyType });
+        map.set(key.attributeName, existing);
+      }
+    }
+    return map;
+  }, [lsis]);
 
   const columns = useMemo<ColumnDef<Row>[]>(() => {
     const allKeys = Array.from(new Set(items.flatMap((item) => Object.keys(item))));
@@ -70,6 +105,7 @@ export function DataGrid({ items, tableKeys, hasNextPage, loadingNextPage, onLoa
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: DEFAULT_PAGE_SIZE } },
+    state: { columnVisibility },
   });
 
   const { pageIndex, pageSize } = table.getState().pagination;
@@ -90,6 +126,8 @@ export function DataGrid({ items, tableKeys, hasNextPage, loadingNextPage, onLoa
                   const key = header.id;
                   const isPK = key === hashKey;
                   const isSK = key === rangeKey;
+                  const gsiMatches = gsiMap.get(key);
+                  const lsiMatches = lsiMap.get(key);
                   return (
                     <th
                       key={header.id}
@@ -99,20 +137,14 @@ export function DataGrid({ items, tableKeys, hasNextPage, loadingNextPage, onLoa
                         <span className={`text-xs font-semibold ${t.text.muted} uppercase tracking-wider`}>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                         </span>
-                        {isPK && (
-                          <Tooltip text="Partition Key (HASH)">
-                            <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${t.text.brand} ${t.bg.partitionKeyAccent} border ${t.border.partitionKeyAccent} cursor-default`}>
-                              PK
-                            </span>
-                          </Tooltip>
-                        )}
-                        {isSK && (
-                          <Tooltip text="Sort Key (RANGE)">
-                            <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${t.text.sortKey} ${t.bg.sortKeyAccent} border ${t.border.sortKeyAccent} cursor-default`}>
-                              SK
-                            </span>
-                          </Tooltip>
-                        )}
+                        {isPK && <KeyBadge variant="PK" />}
+                        {isSK && <KeyBadge variant="SK" />}
+                        {gsiMatches?.map((gsi) => (
+                          <KeyBadge key={gsi.indexName} variant="GSI" tooltip={`GSI: ${gsi.indexName} (${gsi.keyType})`} />
+                        ))}
+                        {lsiMatches?.map((lsi) => (
+                          <KeyBadge key={lsi.indexName} variant="LSI" tooltip={`LSI: ${lsi.indexName} (${lsi.keyType})`} />
+                        ))}
                       </span>
                     </th>
                   );
