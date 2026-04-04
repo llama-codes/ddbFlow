@@ -35,6 +35,7 @@ ApplicationMenu.setApplicationMenu([
 ]);
 
 const rpc = BrowserView.defineRPC<AppRPC>({
+  maxRequestTime: 30_000,
   handlers: {
     requests: rpcRequestHandlers,
     messages: {
