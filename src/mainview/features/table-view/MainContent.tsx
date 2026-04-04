@@ -6,8 +6,10 @@ import { Button } from "../../components/Button";
 import { CacheIndicator } from "../../components/CacheIndicator";
 import { DataGrid } from "./DataGrid";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { SearchInput } from "../../components/SearchInput";
 import { useTheme } from "../../theme/ThemeProvider";
 import { cacheGet, cacheSet } from "../../lib/cache";
+import { formatValue } from "../../lib/format";
 import type { QueryResult, TableInfo } from "shared/schemas";
 
 const CACHE_COLVIS = (t: string) => `ddbflow:colvis:${t}`;
@@ -37,6 +39,15 @@ export function MainContent({
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [visibilityLoaded, setVisibilityLoaded] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  function toggleSearch() {
+    setSearchOpen((prev) => {
+      if (prev) setSearch("");
+      return !prev;
+    });
+  }
 
   const hashKey = tableInfo?.keys.find((k) => k.keyType === "HASH")?.attributeName;
   const rangeKey = tableInfo?.keys.find((k) => k.keyType === "RANGE")?.attributeName;
@@ -84,10 +95,24 @@ export function MainContent({
     [toggleableColumns, columnVisibility, hashKey, rangeKey, gsiCountMap, lsiCountMap],
   );
 
+  const filteredItems = useMemo(() => {
+    const items = scanResult?.items ?? [];
+    const term = search.trim().toLowerCase();
+    if (!term) return items;
+    return items.filter((row) =>
+      Object.entries(row).some(([key, value]) => {
+        if (columnVisibility[key] === false) return false;
+        return formatValue(value).toLowerCase().includes(term);
+      })
+    );
+  }, [scanResult?.items, search, columnVisibility]);
+
   // Load cached column visibility when table changes
   useEffect(() => {
     setColumnVisibility({});
     setVisibilityLoaded(false);
+    setSearch("");
+    setSearchOpen(false);
     if (!selectedTable) return;
     cacheGet<VisibilityState>(CACHE_COLVIS(selectedTable)).then((cached) => {
       if (cached) setColumnVisibility(cached);
@@ -141,6 +166,13 @@ export function MainContent({
           <h2 className={`text-sm font-semibold ${t.text.primary}`}>{selectedTable}</h2>
         </div>
         <div className="flex items-center gap-1">
+          <Tooltip text={searchOpen ? "Close search" : "Search items"}>
+            <Button.Container variant="ghost" onClick={toggleSearch}>
+              <Button.Icon>
+                <Icon size={14} className={searchOpen ? t.text.brand : ""}>{IconPaths.search}</Icon>
+              </Button.Icon>
+            </Button.Container>
+          </Tooltip>
           <ColumnVisibilityDropdown
             columns={dropdownColumns}
             onToggle={handleToggleColumn}
@@ -157,6 +189,22 @@ export function MainContent({
           <CacheIndicator cachedAt={scanCachedAt} position="left" />
         </div>
       </div>
+
+      {searchOpen && (
+        <div className={`flex items-center gap-2 px-3 py-1.5 border-b ${t.border.base} shrink-0`}>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Filter items…"
+            autoFocus
+          />
+          {search.trim() && (
+            <span className={`text-xs ${t.text.faint} whitespace-nowrap`}>
+              {filteredItems.length} of {scanResult?.items.length ?? 0}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Body */}
       <div className="flex-1 min-h-0">
@@ -178,9 +226,13 @@ export function MainContent({
             <div className={`flex items-center justify-center h-full ${t.text.faint}`}>
               <p className="text-sm">No items found</p>
             </div>
+          ) : filteredItems.length === 0 ? (
+            <div className={`flex items-center justify-center h-full ${t.text.faint}`}>
+              <p className="text-sm">No items match your search</p>
+            </div>
           ) : (
             <DataGrid
-              items={scanResult.items}
+              items={filteredItems}
               tableKeys={tableInfo?.keys ?? []}
               gsis={tableInfo?.gsis ?? []}
               lsis={tableInfo?.lsis ?? []}

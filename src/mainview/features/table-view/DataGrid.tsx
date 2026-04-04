@@ -9,6 +9,7 @@ import {
 import { useMemo } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import type { KeySchemaElement, GsiInfo, LsiInfo } from "shared/schemas";
+import { formatValue } from "../../lib/format";
 import { Tooltip } from "../../components/Tooltip";
 import { KeyBadge } from "../../components/KeyBadge";
 import { Button } from "../../components/Button";
@@ -19,15 +20,6 @@ type Row = Record<string, unknown>;
 
 const PAGE_SIZES = [10, 25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (typeof value === "number") return String(value);
-  if (typeof value === "string") return value;
-  if (value instanceof Set) return [...value].join(", ");
-  return JSON.stringify(value);
-}
 
 interface IndexMatch {
   indexName: string;
