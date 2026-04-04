@@ -3,7 +3,7 @@ import { useTheme } from "../../theme/ThemeProvider";
 import { Button } from "../../components/Button";
 import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
-import type { ScanSession } from "../../App";
+import type { ScanSession } from "../../lib/cache-keys";
 
 interface SessionsDropdownProps {
   sessions: ScanSession[];

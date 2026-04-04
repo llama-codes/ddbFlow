@@ -12,7 +12,7 @@ import { useTheme } from "../../theme/ThemeProvider";
 import { cacheGet, cacheSet } from "../../lib/cache";
 import { formatValue } from "../../lib/format";
 import type { QueryResult, TableInfo } from "shared/schemas";
-import type { ScanSession } from "../../App";
+import type { ScanSession } from "../../lib/cache-keys";
 
 const CACHE_COLVIS = (t: string) => `ddbflow:colvis:${t}`;
 
