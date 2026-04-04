@@ -83,9 +83,21 @@ export function TableList({
         )}
 
         {error && (
-          <div className={`px-3 py-3 text-sm ${t.text.error}`}>
-            <p className="font-medium">Failed to load</p>
-            <p className={`text-xs ${t.text.errorDim} mt-1`}>{error}</p>
+          <div className={`px-3 py-3`}>
+            <div className="flex items-start gap-2">
+              <Icon size={16} className={`${t.text.error} shrink-0 mt-0.5`}>{IconPaths.warning}</Icon>
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-medium ${t.text.primary}`}>Failed to load</p>
+                <p className={`text-xs ${t.text.muted} mt-1 break-words`}>{error}</p>
+                <button
+                  type="button"
+                  className={`mt-2 text-xs ${t.text.brand} hover:underline cursor-pointer`}
+                  onClick={onRefresh}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

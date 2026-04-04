@@ -232,9 +232,25 @@ export function MainContent({
         )}
 
         {scanError && !scanLoading && (
-          <div className={`p-4 text-sm ${t.text.error}`}>
-            <p className="font-medium">Scan failed</p>
-            <p className={`mt-1 text-xs ${t.text.errorDim}`}>{scanError}</p>
+          <div className="flex items-center justify-center h-full">
+            <div className={`max-w-md w-full mx-4 p-4 rounded-lg border ${t.border.base} ${t.bg.surface}`}>
+              <div className="flex items-start gap-3">
+                <Icon size={20} className={`${t.text.error} shrink-0 mt-0.5`}>{IconPaths.warning}</Icon>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium ${t.text.primary}`}>Scan failed</p>
+                  <p className={`mt-1 text-xs ${t.text.muted} break-words whitespace-pre-wrap`}>{scanError}</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={`text-xs px-2.5 py-1 rounded ${t.button.sm} cursor-pointer`}
+                      onClick={onRefreshScan}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

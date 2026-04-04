@@ -9,8 +9,31 @@ type AnyDynamoEffect<A> = Effect.Effect<A, unknown, DynamoClient>;
 
 let currentClientLive = DynamoClientLive;
 
-function run<A>(effect: AnyDynamoEffect<A>): Promise<A> {
-  return Effect.runPromise(effect.pipe(Effect.provide(currentClientLive)));
+async function run<A>(effect: AnyDynamoEffect<A>): Promise<A> {
+  try {
+    return await Effect.runPromise(effect.pipe(Effect.provide(currentClientLive)));
+  } catch (e: unknown) {
+    const msg = extractRunError(e);
+    throw new Error(msg);
+  }
+}
+
+function extractRunError(e: unknown): string {
+  if (e instanceof Error) {
+    if (e.cause && typeof e.cause === "object") {
+      const cause = e.cause as Record<string, unknown>;
+      if (cause.cause instanceof Error) return cause.cause.message;
+      if (typeof cause.cause === "object" && cause.cause !== null) {
+        const inner = cause.cause as Record<string, unknown>;
+        if (typeof inner.message === "string") return inner.message;
+        if (typeof inner.name === "string") return inner.name;
+      }
+      if (typeof cause.message === "string") return cause.message;
+      if (typeof cause._tag === "string") return cause._tag;
+    }
+    return e.message;
+  }
+  return String(e);
 }
 
 export const rpcRequestHandlers = {

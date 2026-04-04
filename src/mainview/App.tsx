@@ -18,6 +18,25 @@ function sessionTimestamp(): string {
   return new Date().toISOString().replace(/:/g, "-");
 }
 
+function extractErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "object" && e !== null) {
+    const obj = e as Record<string, unknown>;
+    if (obj.cause instanceof Error) return obj.cause.message;
+    if (typeof obj.cause === "object" && obj.cause !== null) {
+      const cause = obj.cause as Record<string, unknown>;
+      if (typeof cause.message === "string") return cause.message;
+      if (typeof cause.name === "string") return cause.name;
+    }
+    if (typeof obj.message === "string") return obj.message;
+    if (typeof obj._tag === "string") {
+      if (typeof obj.message === "string") return `${obj._tag}: ${obj.message}`;
+      return obj._tag;
+    }
+  }
+  return String(e);
+}
+
 export interface ScanSession {
   cacheKey: string;
   fetchedAt: string;
@@ -64,7 +83,7 @@ export function App() {
       cacheSet(CACHE_TABLES, { tables: response, fetchedAt }).catch(() => {});
       rpc.send.log({ msg: `listTables returned ${response.length} tables` });
     } catch (e) {
-      setTablesError(e instanceof Error ? e.message : String(e));
+      setTablesError(extractErrorMessage(e));
     } finally {
       setTablesLoading(false);
     }
@@ -107,7 +126,7 @@ export function App() {
       cacheSet(sessionKey, { result: response, fetchedAt }).catch(() => {});
       refreshSessionList(tableName);
     } catch (e) {
-      setScanError(e instanceof Error ? e.message : String(e));
+      setScanError(extractErrorMessage(e));
     } finally {
       setScanLoading(false);
     }
@@ -136,7 +155,7 @@ export function App() {
         cacheSet(activeScanSessionKey, { result: merged, fetchedAt }).catch(() => {});
       }
     } catch (e) {
-      setScanError(e instanceof Error ? e.message : String(e));
+      setScanError(extractErrorMessage(e));
     } finally {
       setScanLoading(false);
     }
