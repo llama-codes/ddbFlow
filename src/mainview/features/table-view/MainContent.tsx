@@ -6,11 +6,13 @@ import { Button } from "../../components/Button";
 import { CacheIndicator } from "../../components/CacheIndicator";
 import { DataGrid } from "./DataGrid";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { SessionsDropdown } from "./SessionsDropdown";
 import { SearchInput } from "../../components/SearchInput";
 import { useTheme } from "../../theme/ThemeProvider";
 import { cacheGet, cacheSet } from "../../lib/cache";
 import { formatValue } from "../../lib/format";
 import type { QueryResult, TableInfo } from "shared/schemas";
+import type { ScanSession } from "../../App";
 
 const CACHE_COLVIS = (t: string) => `ddbflow:colvis:${t}`;
 
@@ -21,8 +23,12 @@ interface MainContentProps {
   scanLoading: boolean;
   scanError: string | null;
   scanCachedAt: string | null;
+  scanSessions: ScanSession[];
+  activeScanSessionKey: string | null;
   onRefreshScan: () => void;
   onLoadNextPage: () => void;
+  onSelectSession: (key: string) => void;
+  onDeleteSession: (key: string) => void;
 }
 
 export function MainContent({
@@ -32,8 +38,12 @@ export function MainContent({
   scanLoading,
   scanError,
   scanCachedAt,
+  scanSessions,
+  activeScanSessionKey,
   onRefreshScan,
   onLoadNextPage,
+  onSelectSession,
+  onDeleteSession,
 }: MainContentProps) {
   const t = useTheme();
 
@@ -179,7 +189,14 @@ export function MainContent({
             onShowAll={handleShowAll}
             onHideAll={handleHideAll}
           />
-          <Tooltip text="Refresh data">
+          <SessionsDropdown
+            sessions={scanSessions}
+            activeSessionKey={activeScanSessionKey}
+            onSelectSession={onSelectSession}
+            onDeleteSession={onDeleteSession}
+            disabled={scanLoading}
+          />
+          <Tooltip text="New session">
             <Button.Container variant="ghost" onClick={onRefreshScan} disabled={scanLoading}>
               <Button.Icon>
                 <Icon size={14}>{IconPaths.refresh}</Icon>

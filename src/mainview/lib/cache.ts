@@ -19,3 +19,7 @@ export async function cacheDel(key: string): Promise<void> {
 export async function cachePurge(): Promise<void> {
   await rpc.request.purgeCache({});
 }
+
+export async function cacheList(prefix: string): Promise<string[]> {
+  return rpc.request.listCacheKeys({ prefix });
+}

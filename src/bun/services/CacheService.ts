@@ -1,6 +1,6 @@
 import { join } from "path";
 import { homedir } from "os";
-import { mkdir, unlink, rm } from "fs/promises";
+import { mkdir, unlink, rm, readdir } from "fs/promises";
 
 const CACHE_DIR = join(homedir(), ".ddbflow", "cache");
 
@@ -31,4 +31,18 @@ export async function deleteCache(key: string): Promise<void> {
 
 export async function purgeCache(): Promise<void> {
   try { await rm(CACHE_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
+}
+
+export async function listCacheKeys(prefix: string): Promise<string[]> {
+  const parts = prefix.split(":");
+  const dir = join(CACHE_DIR, ...parts);
+  try {
+    const entries = await readdir(dir);
+    return entries
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => `${prefix}:${f.replace(/\.json$/, "")}`)
+      .sort();
+  } catch {
+    return [];
+  }
 }

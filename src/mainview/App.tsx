@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { rpc } from "./lib/electrobun";
-import { cacheGet, cacheSet, cacheDel, cachePurge } from "./lib/cache";
+import { cacheGet, cacheSet, cacheDel, cachePurge, cacheList } from "./lib/cache";
 import { Navbar } from "./components/Navbar";
 import { TableList } from "./features/sidebar/TableList";
 import { MainContent } from "./features/table-view/MainContent";
@@ -11,7 +11,18 @@ import type { QueryResult, TableInfo } from "shared/schemas";
 const CACHE_REGION = "ddbflow:region";
 const CACHE_TABLES = "ddbflow:tables-cache";
 const CACHE_SCHEMA = (t: string) => `ddbflow:schema:${t}`;
-const CACHE_SCAN = (t: string) => `ddbflow:scan:${t}`;
+const CACHE_SCAN_PREFIX = (t: string) => `ddbflow:scan:${t}`;
+const CACHE_SCAN_SESSION = (t: string, ts: string) => `ddbflow:scan:${t}:${ts}`;
+
+function sessionTimestamp(): string {
+  return new Date().toISOString().replace(/:/g, "-");
+}
+
+export interface ScanSession {
+  cacheKey: string;
+  fetchedAt: string;
+  itemCount: number;
+}
 
 export function App() {
   const t = useTheme();
@@ -31,6 +42,10 @@ export function App() {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanCachedAt, setScanCachedAt] = useState<string | null>(null);
+
+  // Session state
+  const [activeScanSessionKey, setActiveScanSessionKey] = useState<string | null>(null);
+  const [scanSessions, setScanSessions] = useState<ScanSession[]>([]);
 
   // Settings state
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -65,21 +80,38 @@ export function App() {
     } catch { /* non-fatal */ }
   }, []);
 
+  const refreshSessionList = useCallback(async (tableName: string) => {
+    const keys = await cacheList(CACHE_SCAN_PREFIX(tableName));
+    const entries: ScanSession[] = [];
+    for (const key of keys) {
+      const data = await cacheGet<{ result: QueryResult; fetchedAt: string }>(key);
+      if (data) {
+        entries.push({ cacheKey: key, fetchedAt: data.fetchedAt, itemCount: data.result.count });
+      }
+    }
+    entries.sort((a, b) => b.fetchedAt.localeCompare(a.fetchedAt));
+    setScanSessions(entries);
+  }, []);
+
   const loadScan = useCallback(async (tableName: string) => {
     setScanLoading(true);
     setScanError(null);
     try {
       const response = await rpc.request.scan({ tableName, limit: 100 });
       const fetchedAt = new Date().toISOString();
+      const ts = sessionTimestamp();
+      const sessionKey = CACHE_SCAN_SESSION(tableName, ts);
       setScanResult(response);
       setScanCachedAt(fetchedAt);
-      cacheSet(CACHE_SCAN(tableName), { result: response, fetchedAt }).catch(() => {});
+      setActiveScanSessionKey(sessionKey);
+      cacheSet(sessionKey, { result: response, fetchedAt }).catch(() => {});
+      refreshSessionList(tableName);
     } catch (e) {
       setScanError(e instanceof Error ? e.message : String(e));
     } finally {
       setScanLoading(false);
     }
-  }, []);
+  }, [refreshSessionList]);
 
   const loadNextScanPage = useCallback(async () => {
     if (!selectedTable || !scanResult?.lastEvaluatedKey) return;
@@ -100,13 +132,15 @@ export function App() {
       const fetchedAt = new Date().toISOString();
       setScanResult(merged);
       setScanCachedAt(fetchedAt);
-      cacheSet(CACHE_SCAN(selectedTable), { result: merged, fetchedAt }).catch(() => {});
+      if (activeScanSessionKey) {
+        cacheSet(activeScanSessionKey, { result: merged, fetchedAt }).catch(() => {});
+      }
     } catch (e) {
       setScanError(e instanceof Error ? e.message : String(e));
     } finally {
       setScanLoading(false);
     }
-  }, [selectedTable, scanResult]);
+  }, [selectedTable, scanResult, activeScanSessionKey]);
 
   const handleSelectTable = useCallback(async (tableName: string) => {
     setSelectedTable(tableName);
@@ -114,24 +148,70 @@ export function App() {
     setScanResult(null);
     setScanError(null);
     setScanCachedAt(null);
+    setActiveScanSessionKey(null);
+    setScanSessions([]);
 
     loadSchema(tableName);
 
-    const cached = await cacheGet<{ result: QueryResult; fetchedAt: string }>(CACHE_SCAN(tableName));
-    if (cached) {
-      setScanResult(cached.result);
-      setScanCachedAt(cached.fetchedAt);
-    } else {
+    let loaded = false;
+    try {
+      const keys = await cacheList(CACHE_SCAN_PREFIX(tableName));
+      const newestKey = keys[keys.length - 1];
+      if (newestKey) {
+        const cached = await cacheGet<{ result: QueryResult; fetchedAt: string }>(newestKey);
+        if (cached) {
+          setScanResult(cached.result);
+          setScanCachedAt(cached.fetchedAt);
+          setActiveScanSessionKey(newestKey);
+          refreshSessionList(tableName);
+          loaded = true;
+        }
+      }
+    } catch { /* cache listing failed */ }
+
+    if (!loaded) {
       loadScan(tableName);
     }
-  }, [loadScan, loadSchema]);
+  }, [loadScan, loadSchema, refreshSessionList]);
 
   const handleRefreshScan = useCallback(() => {
     if (!selectedTable) return;
-    cacheDel(CACHE_SCAN(selectedTable)).catch(() => {});
     setScanCachedAt(null);
     loadScan(selectedTable);
   }, [selectedTable, loadScan]);
+
+  const loadSession = useCallback(async (sessionKey: string) => {
+    const cached = await cacheGet<{ result: QueryResult; fetchedAt: string }>(sessionKey);
+    if (cached) {
+      setScanResult(cached.result);
+      setScanCachedAt(cached.fetchedAt);
+      setActiveScanSessionKey(sessionKey);
+    }
+  }, []);
+
+  const deleteSession = useCallback(async (sessionKey: string) => {
+    await cacheDel(sessionKey);
+    if (selectedTable) {
+      if (activeScanSessionKey === sessionKey) {
+        const keys = await cacheList(CACHE_SCAN_PREFIX(selectedTable));
+        const newestKey = keys[keys.length - 1];
+        if (newestKey) {
+          const cached = await cacheGet<{ result: QueryResult; fetchedAt: string }>(newestKey);
+          if (cached) {
+            setScanResult(cached.result);
+            setScanCachedAt(cached.fetchedAt);
+            setActiveScanSessionKey(newestKey);
+          }
+        } else {
+          setScanResult(null);
+          setScanCachedAt(null);
+          setActiveScanSessionKey(null);
+          loadScan(selectedTable);
+        }
+      }
+      refreshSessionList(selectedTable);
+    }
+  }, [activeScanSessionKey, selectedTable, refreshSessionList, loadScan]);
 
   const handleRegionChange = useCallback(async (newRegion: string) => {
     setRegion(newRegion);
@@ -151,6 +231,8 @@ export function App() {
     setScanResult(null);
     setScanCachedAt(null);
     setScanError(null);
+    setActiveScanSessionKey(null);
+    setScanSessions([]);
   }, []);
 
   const checkConnection = useCallback(async () => {
@@ -207,8 +289,12 @@ export function App() {
         scanLoading={scanLoading}
         scanError={scanError}
         scanCachedAt={scanCachedAt}
+        scanSessions={scanSessions}
+        activeScanSessionKey={activeScanSessionKey}
         onRefreshScan={handleRefreshScan}
         onLoadNextPage={loadNextScanPage}
+        onSelectSession={loadSession}
+        onDeleteSession={deleteSession}
       />
       <SettingsPanel
         open={settingsOpen}

@@ -32,4 +32,6 @@ export const rpcRequestHandlers = {
     CacheService.deleteCache(params.key).then(() => "ok"),
   purgeCache: (_params: Record<string, never>) =>
     CacheService.purgeCache().then(() => "ok"),
+  listCacheKeys: (params: { prefix: string }) =>
+    CacheService.listCacheKeys(params.prefix),
 };

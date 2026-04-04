@@ -14,6 +14,7 @@ export type AppRPC = {
       writeCache: { params: { key: string; value: string }; response: string };
       deleteCache: { params: { key: string }; response: string };
       purgeCache: { params: Record<string, never>; response: string };
+      listCacheKeys: { params: { prefix: string }; response: string[] };
     };
     messages: {
       log: { msg: string };
