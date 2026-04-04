@@ -9,11 +9,13 @@ import { ListItem } from "./ListItem";
 import { useTheme } from "../../theme/ThemeProvider";
 import { useTablesCtx } from "../../hooks/TablesContext";
 import { useTableDataCtx } from "../../hooks/TableDataContext";
+import { useTableCacheStatus } from "../../hooks/useTableCacheStatus";
 
 export function TableList() {
   const t = useTheme();
   const { tables, tablesLoading, tablesError, tablesCachedAt, loadTables } = useTablesCtx();
   const { selectedTable, selectTable } = useTableDataCtx();
+  const { tablesWithCache } = useTableCacheStatus(tables);
 
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -102,6 +104,15 @@ export function TableList() {
                   label={table}
                   selected={table === selectedTable}
                   onClick={() => selectTable(table)}
+                  trailingIcon={
+                    tablesWithCache.has(table) ? (
+                      <Tooltip text="Has cached data" position="right">
+                        <span className={`${t.text.faint} flex items-center`}>
+                          <Icon size={10}>{IconPaths.bolt}</Icon>
+                        </span>
+                      </Tooltip>
+                    ) : undefined
+                  }
                 />
               </li>
             ))}

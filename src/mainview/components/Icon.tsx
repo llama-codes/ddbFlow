@@ -81,6 +81,13 @@ export const IconPaths = {
   collection: (
     <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
   ),
+  bolt: (
+    <path
+      fillRule="evenodd"
+      d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.381z"
+      clipRule="evenodd"
+    />
+  ),
   trash: (
     <path
       fillRule="evenodd"
