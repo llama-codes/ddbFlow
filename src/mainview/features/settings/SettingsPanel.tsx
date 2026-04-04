@@ -19,11 +19,15 @@ const AWS_REGIONS = [
   "ap-northeast-1",
 ];
 
+const SCAN_LIMIT_OPTIONS = [25, 50, 100, 250, 500, 1000];
+
 interface SettingsPanelProps {
   open: boolean;
   onClose: () => void;
   region: string;
   onRegionChange: (region: string) => void;
+  scanLimit: number;
+  onScanLimitChange: (limit: number) => void;
   connectionStatus: "unknown" | "connected" | "error";
   checkingConnection: boolean;
   onCheckConnection: () => void;
@@ -35,6 +39,8 @@ export function SettingsPanel({
   onClose,
   region,
   onRegionChange,
+  scanLimit,
+  onScanLimitChange,
   connectionStatus,
   checkingConnection,
   onCheckConnection,
@@ -74,6 +80,17 @@ export function SettingsPanel({
               className="w-full"
             />
             <Description>Changes take effect immediately</Description>
+          </div>
+
+          <div className="space-y-2">
+            <Title>Scan Limit</Title>
+            <Dropdown
+              options={SCAN_LIMIT_OPTIONS.map((n) => ({ value: String(n), label: `${n} items` }))}
+              value={String(scanLimit)}
+              onChange={(v) => onScanLimitChange(Number(v))}
+              className="w-full"
+            />
+            <Description>Max items fetched per scan request</Description>
           </div>
 
           <div className="space-y-2">

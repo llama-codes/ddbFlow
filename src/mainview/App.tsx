@@ -13,6 +13,8 @@ const CACHE_TABLES = "ddbflow:tables-cache";
 const CACHE_SCHEMA = (t: string) => `ddbflow:schema:${t}`;
 const CACHE_SCAN_PREFIX = (t: string) => `ddbflow:scan:${t}`;
 const CACHE_SCAN_SESSION = (t: string, ts: string) => `ddbflow:scan:${t}:${ts}`;
+const CACHE_SCAN_LIMIT = "ddbflow:scan-limit";
+const DEFAULT_SCAN_LIMIT = 100;
 
 function sessionTimestamp(): string {
   return new Date().toISOString().replace(/:/g, "-");
@@ -69,6 +71,7 @@ export function App() {
   // Settings state
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [region, setRegion] = useState("us-east-1");
+  const [scanLimit, setScanLimit] = useState(DEFAULT_SCAN_LIMIT);
   const [connectionStatus, setConnectionStatus] = useState<"unknown" | "connected" | "error">("unknown");
   const [checkingConnection, setCheckingConnection] = useState(false);
 
@@ -116,7 +119,7 @@ export function App() {
     setScanLoading(true);
     setScanError(null);
     try {
-      const response = await rpc.request.scan({ tableName, limit: 100 });
+      const response = await rpc.request.scan({ tableName, limit: scanLimit });
       const fetchedAt = new Date().toISOString();
       const ts = sessionTimestamp();
       const sessionKey = CACHE_SCAN_SESSION(tableName, ts);
@@ -130,7 +133,7 @@ export function App() {
     } finally {
       setScanLoading(false);
     }
-  }, [refreshSessionList]);
+  }, [refreshSessionList, scanLimit]);
 
   const loadNextScanPage = useCallback(async () => {
     if (!selectedTable || !scanResult?.lastEvaluatedKey) return;
@@ -139,7 +142,7 @@ export function App() {
     try {
       const response = await rpc.request.scan({
         tableName: selectedTable,
-        limit: 100,
+        limit: scanLimit,
         exclusiveStartKey: scanResult.lastEvaluatedKey,
       });
       const merged = scanResult ? {
@@ -159,7 +162,7 @@ export function App() {
     } finally {
       setScanLoading(false);
     }
-  }, [selectedTable, scanResult, activeScanSessionKey]);
+  }, [selectedTable, scanResult, activeScanSessionKey, scanLimit]);
 
   const handleSelectTable = useCallback(async (tableName: string) => {
     setSelectedTable(tableName);
@@ -232,6 +235,11 @@ export function App() {
     }
   }, [activeScanSessionKey, selectedTable, refreshSessionList, loadScan]);
 
+  const handleScanLimitChange = useCallback((newLimit: number) => {
+    setScanLimit(newLimit);
+    cacheSet(CACHE_SCAN_LIMIT, newLimit).catch(() => {});
+  }, []);
+
   const handleRegionChange = useCallback(async (newRegion: string) => {
     setRegion(newRegion);
     setTablesCachedAt(null);
@@ -273,6 +281,9 @@ export function App() {
         setRegion(cachedRegion);
         await rpc.request.setRegion({ region: cachedRegion });
       }
+
+      const cachedLimit = await cacheGet<number>(CACHE_SCAN_LIMIT);
+      if (cachedLimit) setScanLimit(cachedLimit);
 
       const tablesCache = await cacheGet<{ tables: string[]; fetchedAt: string }>(CACHE_TABLES);
       if (tablesCache) {
@@ -320,6 +331,8 @@ export function App() {
         onClose={() => setSettingsOpen(false)}
         region={region}
         onRegionChange={handleRegionChange}
+        scanLimit={scanLimit}
+        onScanLimitChange={handleScanLimitChange}
         connectionStatus={connectionStatus}
         checkingConnection={checkingConnection}
         onCheckConnection={checkConnection}
