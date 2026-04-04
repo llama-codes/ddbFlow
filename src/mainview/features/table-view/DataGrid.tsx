@@ -104,8 +104,6 @@ export function DataGrid({ items, tableKeys, gsis, lsis, hasNextPage, loadingNex
   const totalRows = items.length;
   const from = pageIndex * pageSize + 1;
   const to = Math.min((pageIndex + 1) * pageSize, totalRows);
-  const isLastClientPage = !table.getCanNextPage();
-
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Table */}
@@ -182,7 +180,7 @@ export function DataGrid({ items, tableKeys, gsis, lsis, hasNextPage, loadingNex
             value={pageSize}
             onChange={(v) => { table.setPageSize(Number(v)); table.setPageIndex(0); }}
           />
-          {isLastClientPage && hasNextPage && (
+          {hasNextPage && (
             <Button.Container
               variant="sm"
               onClick={onLoadNextPage}

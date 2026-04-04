@@ -91,13 +91,16 @@ export function App() {
         limit: 100,
         exclusiveStartKey: scanResult.lastEvaluatedKey,
       });
-      setScanResult((prev) => prev ? {
+      const merged = scanResult ? {
         ...response,
-        items: [...prev.items, ...response.items],
-        count: prev.count + response.count,
-        scannedCount: prev.scannedCount + response.scannedCount,
-      } : response);
-      setScanCachedAt(null);
+        items: [...scanResult.items, ...response.items],
+        count: scanResult.count + response.count,
+        scannedCount: scanResult.scannedCount + response.scannedCount,
+      } : response;
+      const fetchedAt = new Date().toISOString();
+      setScanResult(merged);
+      setScanCachedAt(fetchedAt);
+      cacheSet(CACHE_SCAN(selectedTable), { result: merged, fetchedAt }).catch(() => {});
     } catch (e) {
       setScanError(e instanceof Error ? e.message : String(e));
     } finally {
