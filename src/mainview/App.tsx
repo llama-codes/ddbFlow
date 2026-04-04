@@ -123,7 +123,7 @@ export function App() {
       setScanResult(response);
       setScanCachedAt(fetchedAt);
       setActiveScanSessionKey(sessionKey);
-      cacheSet(sessionKey, { result: response, fetchedAt }).catch(() => {});
+      await cacheSet(sessionKey, { result: response, fetchedAt });
       refreshSessionList(tableName);
     } catch (e) {
       setScanError(extractErrorMessage(e));
