@@ -7,13 +7,17 @@ import { CacheIndicator } from "../../components/CacheIndicator";
 import { DataGrid } from "./DataGrid";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { SessionsDropdown } from "./SessionsDropdown";
+import { QueryBuilder } from "./QueryBuilder";
 import { SearchInput } from "../../components/SearchInput";
 import { useTheme } from "../../theme/ThemeProvider";
 import { cacheGet, cacheSet } from "../../lib/cache";
 import { formatValue } from "../../lib/format";
 import { useTableDataCtx } from "../../hooks/TableDataContext";
+import { useQueryDataCtx } from "../../hooks/QueryDataContext";
 
 const CACHE_COLVIS = (t: string) => `ddbflow:colvis:${t}`;
+
+type Mode = "scan" | "query";
 
 export function MainContent() {
   const t = useTheme();
@@ -23,10 +27,28 @@ export function MainContent() {
     refreshScan, loadNextScanPage, loadSession, deleteSession,
   } = useTableDataCtx();
 
+  const {
+    queryResult, queryLoading, queryError, queryCachedAt,
+    querySessions, activeQuerySessionKey,
+    loadNextQueryPage, loadQuerySession, deleteQuerySession,
+  } = useQueryDataCtx();
+
+  const [mode, setMode] = useState<Mode>("scan");
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [visibilityLoaded, setVisibilityLoaded] = useState(false);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Unified state based on mode
+  const activeResult = mode === "scan" ? scanResult : queryResult;
+  const activeLoading = mode === "scan" ? scanLoading : queryLoading;
+  const activeError = mode === "scan" ? scanError : queryError;
+  const activeCachedAt = mode === "scan" ? scanCachedAt : queryCachedAt;
+  const activeSessions = mode === "scan" ? scanSessions : querySessions;
+  const activeSessionKey = mode === "scan" ? activeScanSessionKey : activeQuerySessionKey;
+  const activeLoadSession = mode === "scan" ? loadSession : loadQuerySession;
+  const activeDeleteSession = mode === "scan" ? deleteSession : deleteQuerySession;
+  const activeLoadNextPage = mode === "scan" ? loadNextScanPage : loadNextQueryPage;
 
   function toggleSearch() {
     setSearchOpen((prev) => {
@@ -64,10 +86,10 @@ export function MainContent() {
   }, [tableInfo]);
 
   const toggleableColumns = useMemo(() => {
-    if (!scanResult?.items.length) return [];
-    const allKeys = Array.from(new Set(scanResult.items.flatMap((item) => Object.keys(item))));
+    if (!activeResult?.items.length) return [];
+    const allKeys = Array.from(new Set(activeResult.items.flatMap((item) => Object.keys(item))));
     return allKeys.filter((k) => !protectedKeys.has(k));
-  }, [scanResult, protectedKeys]);
+  }, [activeResult, protectedKeys]);
 
   const dropdownColumns = useMemo(
     () => toggleableColumns.map((id) => ({
@@ -81,7 +103,7 @@ export function MainContent() {
   );
 
   const filteredItems = useMemo(() => {
-    const items = scanResult?.items ?? [];
+    const items = activeResult?.items ?? [];
     const term = search.trim().toLowerCase();
     if (!term) return items;
     return items.filter((row) =>
@@ -90,13 +112,14 @@ export function MainContent() {
         return formatValue(value).toLowerCase().includes(term);
       })
     );
-  }, [scanResult?.items, search, columnVisibility]);
+  }, [activeResult?.items, search, columnVisibility]);
 
   useEffect(() => {
     setColumnVisibility({});
     setVisibilityLoaded(false);
     setSearch("");
     setSearchOpen(false);
+    setMode("scan");
     if (!selectedTable) return;
     cacheGet<VisibilityState>(CACHE_COLVIS(selectedTable)).then((cached) => {
       if (cached) setColumnVisibility(cached);
@@ -147,6 +170,31 @@ export function MainContent() {
       <div className={`flex items-center justify-between px-4 py-2 border-b ${t.border.base} shrink-0`}>
         <div className="flex items-center gap-2">
           <h2 className={`text-sm font-semibold ${t.text.primary}`}>{selectedTable}</h2>
+          {/* Mode toggle */}
+          <div className={`flex items-center rounded border ${t.border.muted} overflow-hidden ml-2`}>
+            <button
+              type="button"
+              className={`text-xs px-2.5 py-1 cursor-pointer transition-colors ${
+                mode === "scan"
+                  ? `${t.bg.selectedAccent} ${t.text.brand}`
+                  : `${t.text.faint} hover:${t.text.secondary}`
+              }`}
+              onClick={() => setMode("scan")}
+            >
+              Scan
+            </button>
+            <button
+              type="button"
+              className={`text-xs px-2.5 py-1 cursor-pointer transition-colors ${
+                mode === "query"
+                  ? `${t.bg.selectedAccent} ${t.text.brand}`
+                  : `${t.text.faint} hover:${t.text.secondary}`
+              }`}
+              onClick={() => setMode("query")}
+            >
+              Query
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <Tooltip text={searchOpen ? "Close search" : "Search items"}>
@@ -163,22 +211,27 @@ export function MainContent() {
             onHideAll={handleHideAll}
           />
           <SessionsDropdown
-            sessions={scanSessions}
-            activeSessionKey={activeScanSessionKey}
-            onSelectSession={loadSession}
-            onDeleteSession={deleteSession}
-            disabled={scanLoading}
+            sessions={activeSessions}
+            activeSessionKey={activeSessionKey}
+            onSelectSession={activeLoadSession}
+            onDeleteSession={activeDeleteSession}
+            disabled={activeLoading}
           />
-          <Tooltip text="New session">
-            <Button.Container variant="ghost" onClick={refreshScan} disabled={scanLoading}>
-              <Button.Icon>
-                <Icon size={14}>{IconPaths.refresh}</Icon>
-              </Button.Icon>
-            </Button.Container>
-          </Tooltip>
-          <CacheIndicator cachedAt={scanCachedAt} position="left" />
+          {mode === "scan" && (
+            <Tooltip text="New session">
+              <Button.Container variant="ghost" onClick={refreshScan} disabled={scanLoading}>
+                <Button.Icon>
+                  <Icon size={14}>{IconPaths.refresh}</Icon>
+                </Button.Icon>
+              </Button.Container>
+            </Tooltip>
+          )}
+          <CacheIndicator cachedAt={activeCachedAt} position="left" />
         </div>
       </div>
+
+      {/* Query builder panel (only in query mode) */}
+      {mode === "query" && <QueryBuilder />}
 
       {searchOpen && (
         <div className={`flex items-center gap-2 px-3 py-1.5 border-b ${t.border.base} shrink-0`}>
@@ -190,7 +243,7 @@ export function MainContent() {
           />
           {search.trim() && (
             <span className={`text-xs ${t.text.faint} whitespace-nowrap`}>
-              {filteredItems.length} of {scanResult?.items.length ?? 0}
+              {filteredItems.length} of {activeResult?.items.length ?? 0}
             </span>
           )}
         </div>
@@ -198,37 +251,43 @@ export function MainContent() {
 
       {/* Body */}
       <div className="flex-1 min-h-0">
-        {scanLoading && (
+        {activeLoading && !activeResult && (
           <div className={`flex items-center justify-center h-full ${t.text.faint}`}>
-            <p className="text-sm animate-pulse">Scanning {selectedTable}…</p>
+            <p className="text-sm animate-pulse">
+              {mode === "scan" ? `Scanning ${selectedTable}…` : `Querying ${selectedTable}…`}
+            </p>
           </div>
         )}
 
-        {scanError && !scanLoading && (
+        {activeError && !activeLoading && (
           <div className="flex items-center justify-center h-full">
             <div className={`max-w-md w-full mx-4 p-4 rounded-lg border ${t.border.base} ${t.bg.surface}`}>
               <div className="flex items-start gap-3">
                 <Icon size={20} className={`${t.text.error} shrink-0 mt-0.5`}>{IconPaths.warning}</Icon>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${t.text.primary}`}>Scan failed</p>
-                  <p className={`mt-1 text-xs ${t.text.muted} break-words whitespace-pre-wrap`}>{scanError}</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <button
-                      type="button"
-                      className={`text-xs px-2.5 py-1 rounded ${t.button.sm} cursor-pointer`}
-                      onClick={refreshScan}
-                    >
-                      Retry
-                    </button>
-                  </div>
+                  <p className={`text-sm font-medium ${t.text.primary}`}>
+                    {mode === "scan" ? "Scan failed" : "Query failed"}
+                  </p>
+                  <p className={`mt-1 text-xs ${t.text.muted} break-words whitespace-pre-wrap`}>{activeError}</p>
+                  {mode === "scan" && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        className={`text-xs px-2.5 py-1 rounded ${t.button.sm} cursor-pointer`}
+                        onClick={refreshScan}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {scanResult && !scanLoading && (
-          scanResult.items.length === 0 ? (
+        {activeResult && !activeLoading && (
+          activeResult.items.length === 0 ? (
             <div className={`flex items-center justify-center h-full ${t.text.faint}`}>
               <p className="text-sm">No items found</p>
             </div>
@@ -242,12 +301,19 @@ export function MainContent() {
               tableKeys={tableInfo?.keys ?? []}
               gsis={tableInfo?.gsis ?? []}
               lsis={tableInfo?.lsis ?? []}
-              hasNextPage={!!scanResult.lastEvaluatedKey}
-              loadingNextPage={scanLoading}
-              onLoadNextPage={loadNextScanPage}
+              hasNextPage={!!activeResult.lastEvaluatedKey}
+              loadingNextPage={activeLoading}
+              onLoadNextPage={activeLoadNextPage}
               columnVisibility={columnVisibility}
             />
           )
+        )}
+
+        {/* Empty state for query mode when no query has been executed */}
+        {mode === "query" && !activeResult && !activeLoading && !activeError && (
+          <div className={`flex items-center justify-center h-full ${t.text.faint}`}>
+            <p className="text-sm">Configure your query above and click Execute</p>
+          </div>
         )}
       </div>
     </div>

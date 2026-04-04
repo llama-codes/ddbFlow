@@ -10,12 +10,14 @@ import { useTheme } from "./theme/ThemeProvider";
 import { SettingsProvider, useSettingsCtx } from "./hooks/SettingsContext";
 import { TablesProvider, useTablesCtx } from "./hooks/TablesContext";
 import { TableDataProvider, useTableDataCtx } from "./hooks/TableDataContext";
+import { QueryDataProvider, useQueryDataCtx } from "./hooks/QueryDataContext";
 
 function AppLayout() {
   const t = useTheme();
   const settings = useSettingsCtx();
   const tables = useTablesCtx();
   const tableData = useTableDataCtx();
+  const queryData = useQueryDataCtx();
 
   const handleRegionChange = useCallback(async (newRegion: string) => {
     settings.setRegion(newRegion);
@@ -30,7 +32,8 @@ function AppLayout() {
     await cachePurge();
     tables.resetTables();
     tableData.resetTableData();
-  }, [tables, tableData]);
+    queryData.resetQueryData();
+  }, [tables, tableData, queryData]);
 
   useEffect(() => {
     async function init() {
@@ -66,7 +69,9 @@ function AppProviders({ children }: { children: React.ReactNode }) {
         <SettingsConsumer>
           {(scanLimit) => (
             <TableDataProvider scanLimit={scanLimit}>
-              {children}
+              <QueryDataBridge scanLimit={scanLimit}>
+                {children}
+              </QueryDataBridge>
             </TableDataProvider>
           )}
         </SettingsConsumer>
@@ -79,6 +84,16 @@ function AppProviders({ children }: { children: React.ReactNode }) {
 function SettingsConsumer({ children }: { children: (scanLimit: number) => React.ReactNode }) {
   const { scanLimit } = useSettingsCtx();
   return <>{children(scanLimit)}</>;
+}
+
+/** Bridges TableDataContext into QueryDataProvider */
+function QueryDataBridge({ children, scanLimit }: { children: React.ReactNode; scanLimit: number }) {
+  const { selectedTable, tableInfo } = useTableDataCtx();
+  return (
+    <QueryDataProvider selectedTable={selectedTable} tableInfo={tableInfo} scanLimit={scanLimit}>
+      {children}
+    </QueryDataProvider>
+  );
 }
 
 export function App() {

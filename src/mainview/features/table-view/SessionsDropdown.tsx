@@ -3,10 +3,17 @@ import { useTheme } from "../../theme/ThemeProvider";
 import { Button } from "../../components/Button";
 import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
-import type { ScanSession } from "../../lib/cache-keys";
+import { formatQueryMeta } from "../../lib/query-expression";
+import type { ScanSession, QuerySession } from "../../lib/cache-keys";
+
+type AnySession = ScanSession | QuerySession;
+
+function isQuerySession(s: AnySession): s is QuerySession {
+  return "queryParams" in s;
+}
 
 interface SessionsDropdownProps {
-  sessions: ScanSession[];
+  sessions: AnySession[];
   activeSessionKey: string | null;
   onSelectSession: (key: string) => void;
   onDeleteSession: (key: string) => void;
@@ -86,7 +93,13 @@ export function SessionsDropdown({
                 >
                   <div className="flex-1 min-w-0">
                     <div className="truncate">{formatSessionDate(session.fetchedAt)}</div>
-                    <div className={`${t.text.faint}`}>{session.itemCount} items</div>
+                    {isQuerySession(session) ? (
+                      <div className={`${t.text.faint} truncate`} title={formatQueryMeta(session.queryParams)}>
+                        {formatQueryMeta(session.queryParams)}
+                      </div>
+                    ) : (
+                      <div className={`${t.text.faint}`}>{session.itemCount} items</div>
+                    )}
                   </div>
                   <button
                     type="button"
