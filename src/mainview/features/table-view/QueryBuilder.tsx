@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { useTableDataCtx } from "../../hooks/TableDataContext";
 import { useQueryDataCtx } from "../../hooks/QueryDataContext";
@@ -11,7 +11,11 @@ import { Tooltip } from "../../components/Tooltip";
 import {
   buildQueryExpression,
   buildSessionMeta,
+  FILTER_OPERATORS,
+  emptyFilterCondition,
   type SortKeyOperator,
+  type FilterCondition,
+  type FilterOperator,
 } from "../../lib/query-expression";
 import { formatSavedQuerySummary, type SavedQuery } from "../../lib/saved-queries";
 import type { KeySchemaElement } from "shared/schemas";
@@ -46,6 +50,9 @@ export function QueryBuilder() {
   const [skValue2, setSkValue2] = useState("");
   const [scanIndexForward, setScanIndexForward] = useState(true);
 
+  // Filter conditions
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
+
   // Save mode state
   const [saveMode, setSaveMode] = useState(false);
   const [saveName, setSaveName] = useState("");
@@ -63,6 +70,7 @@ export function QueryBuilder() {
     setSkValue("");
     setSkValue2("");
     setScanIndexForward(true);
+    setFilters([]);
     setSaveMode(false);
     setSavedQueriesOpen(false);
   }, [selectedTable]);
@@ -127,6 +135,15 @@ export function QueryBuilder() {
 
   const canExecute = pkValue.trim() !== "" && !queryLoading;
 
+  // Filter helpers
+  const updateFilter = useCallback((index: number, patch: Partial<FilterCondition>) => {
+    setFilters((prev) => prev.map((f, i) => (i === index ? { ...f, ...patch } : f)));
+  }, []);
+
+  const removeFilter = useCallback((index: number) => {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   function handleExecute() {
     if (!canExecute || !selectedTable || !pkKey) return;
 
@@ -145,8 +162,8 @@ export function QueryBuilder() {
       limit: scanLimit,
     };
 
-    const params = buildQueryExpression(form);
-    const meta = buildSessionMeta(form);
+    const params = buildQueryExpression(form, filters);
+    const meta = buildSessionMeta(form, filters);
     executeQuery(params, meta);
   }
 
@@ -160,6 +177,7 @@ export function QueryBuilder() {
   function handleSave() {
     const name = saveName.trim();
     if (!name || !pkKey) return;
+    const validFilters = filters.filter((f) => f.attribute.trim());
     saveQuery({
       name,
       pkAttribute: pkKey.attributeName,
@@ -169,6 +187,7 @@ export function QueryBuilder() {
       skValue: skKey && skValue.trim() ? skValue.trim() : undefined,
       skValue2: skKey && skOperator === "between" && skValue2.trim() ? skValue2.trim() : undefined,
       scanIndexForward,
+      filters: validFilters.length > 0 ? validFilters : undefined,
     });
     setSaveMode(false);
     setSaveName("");
@@ -183,6 +202,7 @@ export function QueryBuilder() {
     setPkValue(query.pkValue ?? "");
     setSkValue(query.skValue ?? "");
     setSkValue2(query.skValue2 ?? "");
+    setFilters(query.filters ?? []);
     setSavedQueriesOpen(false);
   }
 
@@ -259,6 +279,85 @@ export function QueryBuilder() {
           )}
         </div>
       )}
+
+      {/* Filter conditions */}
+      {filters.map((filter, idx) => {
+        const opMeta = FILTER_OPERATORS.find((o) => o.value === filter.operator);
+        return (
+          <div key={idx} className="flex items-center gap-2">
+            <label className={`text-xs ${t.text.faint} w-12 shrink-0`}>
+              {idx === 0 ? "Filter" : ""}
+            </label>
+            <input
+              type="text"
+              value={filter.attribute}
+              onChange={(e) => updateFilter(idx, { attribute: e.target.value })}
+              onKeyDown={(e) => e.stopPropagation()}
+              placeholder="Attribute…"
+              className={`${t.input.base} rounded px-2 py-1 text-xs w-28 min-w-0`}
+            />
+            <Dropdown
+              options={FILTER_OPERATORS.map((o) => ({ value: o.value, label: o.label }))}
+              value={filter.operator}
+              onChange={(v) => updateFilter(idx, { operator: v as FilterOperator })}
+              size="sm"
+              className="w-36 shrink-0"
+            />
+            {opMeta?.needsValue && (
+              <input
+                type="text"
+                value={filter.value}
+                onChange={(e) => updateFilter(idx, { value: e.target.value })}
+                onKeyDown={(e) => e.stopPropagation()}
+                placeholder={filter.operator === "between" ? "From…" : "Value…"}
+                className={`${t.input.base} rounded px-2 py-1 text-xs flex-1 min-w-0`}
+              />
+            )}
+            {opMeta?.needsValue2 && (
+              <>
+                <span className={`text-xs ${t.text.faint}`}>and</span>
+                <input
+                  type="text"
+                  value={filter.value2}
+                  onChange={(e) => updateFilter(idx, { value2: e.target.value })}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  placeholder="To…"
+                  className={`${t.input.base} rounded px-2 py-1 text-xs flex-1 min-w-0`}
+                />
+              </>
+            )}
+            {!opMeta?.needsValue && (
+              <div className="flex-1" />
+            )}
+            <button
+              type="button"
+              className={`p-0.5 ${t.text.faint} hover:${t.text.error} cursor-pointer`}
+              onClick={() => removeFilter(idx)}
+              title="Remove filter"
+            >
+              <Icon size={12}>{IconPaths.close}</Icon>
+            </button>
+          </div>
+        );
+      })}
+
+      {/* Add filter button row */}
+      <div className="flex items-center gap-2">
+        <div className="w-12 shrink-0" />
+        <button
+          type="button"
+          className={`flex items-center gap-1 text-xs ${t.text.faint} hover:${t.text.secondary} cursor-pointer`}
+          onClick={() => setFilters((prev) => [...prev, emptyFilterCondition()])}
+        >
+          <Icon size={10}>{IconPaths.plus}</Icon>
+          <span>Add filter</span>
+        </button>
+        {filters.length > 0 && (
+          <span className={`text-[10px] ${t.text.faint}`}>
+            {filters.length} filter{filters.length !== 1 ? "s" : ""} (AND)
+          </span>
+        )}
+      </div>
 
       {/* Row 4: Direction + Saved Queries + Save + Execute */}
       <div className="flex items-center gap-2">

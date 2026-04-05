@@ -28,6 +28,7 @@ export interface QuerySessionMeta {
   skValue?: string;
   skValue2?: string;
   direction: "asc" | "desc";
+  filters?: import("./query-expression").FilterCondition[];
 }
 
 export interface QuerySession extends ScanSession {

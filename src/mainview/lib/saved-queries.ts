@@ -1,6 +1,6 @@
 import { cacheGet, cacheSet } from "./cache";
 import { CACHE_SAVED_QUERIES } from "./cache-keys";
-import type { SortKeyOperator } from "./query-expression";
+import type { SortKeyOperator, FilterCondition } from "./query-expression";
 import type { TableInfo, KeySchemaElement } from "shared/schemas";
 
 export interface SavedQuery {
@@ -13,6 +13,7 @@ export interface SavedQuery {
   skValue?: string;
   skValue2?: string; // for "between"
   scanIndexForward: boolean;
+  filters?: FilterCondition[];
   createdAt: string;
 }
 
@@ -65,6 +66,9 @@ export function formatSavedQuerySummary(query: SavedQuery): string {
       s += `, ${query.skAttribute} ${query.skOperator} ${query.skValue}`;
     }
   }
+  if (query.filters && query.filters.length > 0) {
+    s += ` + ${query.filters.length} filter${query.filters.length !== 1 ? "s" : ""}`;
+  }
   return s;
 }
 
@@ -77,6 +81,7 @@ export interface CreateSavedQueryInput {
   skValue?: string;
   skValue2?: string;
   scanIndexForward?: boolean;
+  filters?: FilterCondition[];
 }
 
 export function createSavedQuery(input: CreateSavedQueryInput): SavedQuery {
@@ -90,6 +95,7 @@ export function createSavedQuery(input: CreateSavedQueryInput): SavedQuery {
     skValue: input.skValue || undefined,
     skValue2: input.skValue2 || undefined,
     scanIndexForward: input.scanIndexForward ?? true,
+    filters: input.filters && input.filters.length > 0 ? input.filters : undefined,
     createdAt: new Date().toISOString(),
   };
 }

@@ -98,4 +98,11 @@ export const IconPaths = {
   bookmark: (
     <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
   ),
+  plus: (
+    <path
+      fillRule="evenodd"
+      d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+      clipRule="evenodd"
+    />
+  ),
 };
