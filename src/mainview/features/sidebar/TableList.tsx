@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Icon, IconPaths } from "../../components/Icon";
 import { Tooltip } from "../../components/Tooltip";
 import { Button } from "../../components/Button";
@@ -10,15 +10,18 @@ import { useTheme } from "../../theme/ThemeProvider";
 import { useTablesCtx } from "../../hooks/TablesContext";
 import { useTableDataCtx } from "../../hooks/TableDataContext";
 import { useTableCacheStatus } from "../../hooks/useTableCacheStatus";
+import { useFavoriteTables } from "../../hooks/useFavoriteTables";
 
 export function TableList() {
   const t = useTheme();
   const { tables, tablesLoading, tablesError, tablesCachedAt, loadTables } = useTablesCtx();
   const { selectedTable, selectTable } = useTableDataCtx();
   const { tablesWithCache } = useTableCacheStatus(tables);
+  const { isFavorite, toggleFavorite, favorites } = useFavoriteTables();
 
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   function toggleSearch() {
     setSearchOpen((prev) => {
@@ -27,15 +30,37 @@ export function TableList() {
     });
   }
 
-  const filtered = search.trim()
-    ? tables.filter((t) => t.toLowerCase().includes(search.toLowerCase()))
-    : tables;
+  const sorted = useMemo(() => {
+    const favs: string[] = [];
+    const rest: string[] = [];
+    for (const table of tables) {
+      if (favorites.has(table)) favs.push(table);
+      else rest.push(table);
+    }
+    return [...favs, ...rest];
+  }, [tables, favorites]);
+
+  const filtered = useMemo(() => {
+    let list = sorted;
+    if (favoritesOnly) list = list.filter((t) => favorites.has(t));
+    if (search.trim()) list = list.filter((t) => t.toLowerCase().includes(search.toLowerCase()));
+    return list;
+  }, [sorted, favoritesOnly, favorites, search]);
 
   return (
     <div className={`${t.bg.surfaceDim} border-r ${t.border.base} flex flex-col min-h-0`}>
       <div className={`flex items-center justify-between px-3 py-2 border-b ${t.border.base}`}>
         <Title>Tables</Title>
         <div className="flex items-center gap-0.5">
+          <Tooltip text={favoritesOnly ? "Show all tables" : "Show favorites only"}>
+            <Button.Container variant="ghost" onClick={() => setFavoritesOnly((p) => !p)}>
+              <Button.Icon>
+                <Icon size={14} className={favoritesOnly ? "text-yellow-400" : ""}>
+                  {favoritesOnly ? IconPaths.star : IconPaths.starOutline}
+                </Icon>
+              </Button.Icon>
+            </Button.Container>
+          </Tooltip>
           <Tooltip text={searchOpen ? "Close search" : "Search tables"}>
             <Button.Container variant="ghost" onClick={toggleSearch}>
               <Button.Icon>
@@ -92,7 +117,7 @@ export function TableList() {
 
         {!tablesLoading && !tablesError && filtered.length === 0 && (
           <p className={`px-3 py-4 text-sm ${t.text.faint}`}>
-            {search.trim() ? "No matches" : "No tables found"}
+            {search.trim() ? "No matches" : favoritesOnly ? "No favorites yet" : "No tables found"}
           </p>
         )}
 
@@ -104,6 +129,8 @@ export function TableList() {
                   label={table}
                   selected={table === selectedTable}
                   onClick={() => selectTable(table)}
+                  isFavorite={isFavorite(table)}
+                  onToggleFavorite={() => toggleFavorite(table)}
                   trailingIcon={
                     tablesWithCache.has(table) ? (
                       <Tooltip text="Has cached data" position="right">
