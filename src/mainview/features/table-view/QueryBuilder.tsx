@@ -1,16 +1,19 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { useTableDataCtx } from "../../hooks/TableDataContext";
 import { useQueryDataCtx } from "../../hooks/QueryDataContext";
 import { useSettingsCtx } from "../../hooks/SettingsContext";
+import { useSavedQueries } from "../../hooks/useSavedQueries";
 import { Dropdown } from "../../components/Dropdown";
 import { Button } from "../../components/Button";
 import { Icon, IconPaths } from "../../components/Icon";
+import { Tooltip } from "../../components/Tooltip";
 import {
   buildQueryExpression,
   buildSessionMeta,
   type SortKeyOperator,
 } from "../../lib/query-expression";
+import { formatSavedQuerySummary, type SavedQuery } from "../../lib/saved-queries";
 import type { KeySchemaElement } from "shared/schemas";
 
 const SK_OPERATORS: { value: SortKeyOperator; label: string }[] = [
@@ -34,6 +37,7 @@ export function QueryBuilder() {
   const { tableInfo, selectedTable } = useTableDataCtx();
   const { executeQuery, queryLoading } = useQueryDataCtx();
   const { scanLimit } = useSettingsCtx();
+  const { savedQueries, saveQuery, deleteQuery, getCompatibleIndex } = useSavedQueries(tableInfo);
 
   const [selectedIndex, setSelectedIndex] = useState("");
   const [pkValue, setPkValue] = useState("");
@@ -41,6 +45,15 @@ export function QueryBuilder() {
   const [skValue, setSkValue] = useState("");
   const [skValue2, setSkValue2] = useState("");
   const [scanIndexForward, setScanIndexForward] = useState(true);
+
+  // Save mode state
+  const [saveMode, setSaveMode] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const saveRef = useRef<HTMLDivElement>(null);
+
+  // Saved queries dropdown state
+  const [savedQueriesOpen, setSavedQueriesOpen] = useState(false);
+  const savedQueriesRef = useRef<HTMLDivElement>(null);
 
   // Reset form when table changes
   useEffect(() => {
@@ -50,7 +63,34 @@ export function QueryBuilder() {
     setSkValue("");
     setSkValue2("");
     setScanIndexForward(true);
+    setSaveMode(false);
+    setSavedQueriesOpen(false);
   }, [selectedTable]);
+
+  // Outside-click for save mode
+  useEffect(() => {
+    if (!saveMode) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (saveRef.current && !saveRef.current.contains(e.target as Node)) {
+        setSaveMode(false);
+        setSaveName("");
+      }
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [saveMode]);
+
+  // Outside-click for saved queries dropdown
+  useEffect(() => {
+    if (!savedQueriesOpen) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (savedQueriesRef.current && !savedQueriesRef.current.contains(e.target as Node)) {
+        setSavedQueriesOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [savedQueriesOpen]);
 
   const indexOptions = useMemo((): IndexOption[] => {
     if (!tableInfo) return [];
@@ -115,6 +155,35 @@ export function QueryBuilder() {
       e.preventDefault();
       handleExecute();
     }
+  }
+
+  function handleSave() {
+    const name = saveName.trim();
+    if (!name || !pkKey) return;
+    saveQuery({
+      name,
+      pkAttribute: pkKey.attributeName,
+      pkValue: pkValue.trim() || undefined,
+      skAttribute: skKey?.attributeName,
+      skOperator: skKey ? skOperator : undefined,
+      skValue: skKey && skValue.trim() ? skValue.trim() : undefined,
+      skValue2: skKey && skOperator === "between" && skValue2.trim() ? skValue2.trim() : undefined,
+      scanIndexForward,
+    });
+    setSaveMode(false);
+    setSaveName("");
+  }
+
+  function handleLoadQuery(query: SavedQuery) {
+    const match = getCompatibleIndex(query.id);
+    if (!match) return;
+    setSelectedIndex(match.indexValue);
+    if (query.skOperator) setSkOperator(query.skOperator);
+    setScanIndexForward(query.scanIndexForward);
+    setPkValue(query.pkValue ?? "");
+    setSkValue(query.skValue ?? "");
+    setSkValue2(query.skValue2 ?? "");
+    setSavedQueriesOpen(false);
   }
 
   if (!tableInfo) return null;
@@ -191,7 +260,7 @@ export function QueryBuilder() {
         </div>
       )}
 
-      {/* Row 4: Direction + Execute */}
+      {/* Row 4: Direction + Saved Queries + Save + Execute */}
       <div className="flex items-center gap-2">
         <label className={`text-xs ${t.text.faint} w-12 shrink-0`}>Order</label>
         <button
@@ -218,6 +287,118 @@ export function QueryBuilder() {
         </button>
 
         <div className="flex-1" />
+
+        {/* Saved Queries dropdown */}
+        <div className="relative" ref={savedQueriesRef}>
+          <Tooltip text="Saved queries" position="top">
+            <Button.Container
+              variant="ghost"
+              onClick={() => savedQueries.length > 0 && setSavedQueriesOpen((o) => !o)}
+              disabled={savedQueries.length === 0}
+            >
+              <Button.Icon>
+                <Icon size={12} className={savedQueriesOpen ? t.text.brand : ""}>{IconPaths.bookmark}</Icon>
+              </Button.Icon>
+              {savedQueries.length > 0 && (
+                <span className={`text-xs ${t.text.faint} ml-0.5`}>{savedQueries.length}</span>
+              )}
+            </Button.Container>
+          </Tooltip>
+
+          {savedQueriesOpen && (
+            <div
+              className={`absolute right-0 bottom-full mb-1 w-72 ${t.bg.elevated} border ${t.border.muted} rounded-md shadow-lg z-50 flex flex-col`}
+            >
+              <div className={`px-3 py-2 border-b ${t.border.base}`}>
+                <span className={`text-xs font-medium ${t.text.secondary}`}>
+                  {savedQueries.length} saved quer{savedQueries.length !== 1 ? "ies" : "y"}
+                </span>
+              </div>
+              <div className="max-h-64 overflow-y-auto py-1">
+                {savedQueries.map((query) => {
+                  const compatible = !!getCompatibleIndex(query.id);
+                  return (
+                    <div
+                      key={query.id}
+                      className={`flex items-center gap-2 px-3 py-2 text-xs group ${
+                        compatible
+                          ? `${t.text.secondary} cursor-pointer hover:${t.bg.hover}`
+                          : `${t.text.faint} opacity-40 cursor-default`
+                      }`}
+                      onClick={() => compatible && handleLoadQuery(query)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate font-medium">{query.name}</div>
+                        <div className={`${t.text.faint} truncate`}>
+                          {formatSavedQuerySummary(query)}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className={`p-0.5 opacity-0 group-hover:opacity-100 ${t.text.faint} hover:${t.text.error} transition-opacity cursor-pointer`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteQuery(query.id);
+                        }}
+                        title="Delete saved query"
+                      >
+                        <Icon size={12}>{IconPaths.trash}</Icon>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Save button / inline input */}
+        <div ref={saveRef}>
+          {saveMode ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSave();
+                  } else if (e.key === "Escape") {
+                    setSaveMode(false);
+                    setSaveName("");
+                  }
+                }}
+                placeholder="Query name…"
+                autoFocus
+                className={`${t.input.base} rounded px-2 py-1 text-xs w-32`}
+              />
+              <Button.Container
+                variant="ghost"
+                onClick={handleSave}
+                disabled={!saveName.trim()}
+              >
+                <Button.Text>Save</Button.Text>
+              </Button.Container>
+            </div>
+          ) : (
+            <Tooltip text="Save query template" position="top">
+              <Button.Container
+                variant="ghost"
+                onClick={() => {
+                  setSaveMode(true);
+                  setSaveName("");
+                }}
+                disabled={!pkKey}
+              >
+                <Button.Icon>
+                  <Icon size={12}>{IconPaths.bookmark}</Icon>
+                </Button.Icon>
+              </Button.Container>
+            </Tooltip>
+          )}
+        </div>
 
         <Button.Container
           variant="default"
