@@ -11,6 +11,7 @@ import { QueryBuilder } from "./QueryBuilder";
 import { SearchInput } from "../../components/SearchInput";
 import { useTheme } from "../../theme/ThemeProvider";
 import { cacheGet, cacheSet } from "../../lib/cache";
+import { CACHE_DDB_VIEW_MODE } from "../../lib/cache-keys";
 import { formatValue } from "../../lib/format";
 import { useTableDataCtx } from "../../hooks/TableDataContext";
 import { useQueryDataCtx } from "../../hooks/QueryDataContext";
@@ -119,13 +120,20 @@ export function MainContent() {
     setVisibilityLoaded(false);
     setSearch("");
     setSearchOpen(false);
-    setMode("scan");
     if (!selectedTable) return;
+    cacheGet<Mode>(CACHE_DDB_VIEW_MODE).then((cached) => {
+      setMode(cached ?? "scan");
+    });
     cacheGet<VisibilityState>(CACHE_COLVIS(selectedTable)).then((cached) => {
       if (cached) setColumnVisibility(cached);
       setVisibilityLoaded(true);
     });
   }, [selectedTable]);
+
+  useEffect(() => {
+    if (!selectedTable) return;
+    cacheSet(CACHE_DDB_VIEW_MODE, mode).catch(() => {});
+  }, [mode, selectedTable]);
 
   useEffect(() => {
     if (!selectedTable || !visibilityLoaded) return;

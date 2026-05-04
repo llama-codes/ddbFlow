@@ -70,14 +70,14 @@ export function SettingsPanel({ onRegionChange, onPurgeCache }: SettingsPanelPro
           </div>
 
           <div className="space-y-2">
-            <Title>Scan Limit</Title>
+            <Title>DynamoDB Scan Limit</Title>
             <Dropdown
               options={SCAN_LIMIT_OPTIONS.map((n) => ({ value: String(n), label: `${n} items` }))}
               value={String(scanLimit)}
               onChange={(v) => handleScanLimitChange(Number(v))}
               className="w-full"
             />
-            <Description>Max items fetched per scan request</Description>
+            <Description>Max items fetched per DynamoDB scan request</Description>
           </div>
 
           <div className="space-y-2">
@@ -89,7 +89,7 @@ export function SettingsPanel({ onRegionChange, onPurgeCache }: SettingsPanelPro
           </div>
           <div className={`space-y-2 pt-4 border-t ${t.border.base}`}>
             <Title>Cache</Title>
-            <Description>Clear all locally cached table and scan data</Description>
+            <Description>Clear all locally cached service data</Description>
             <Button.Container className="w-full justify-center" onClick={onPurgeCache}>
               <Button.Text>Purge all cache</Button.Text>
             </Button.Container>

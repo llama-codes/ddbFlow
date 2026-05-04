@@ -1,16 +1,19 @@
-# ddbFlow
+# AWS Flow
 
-A lightweight desktop app for browsing, querying, and exploring your AWS DynamoDB tables.
+A lightweight desktop app for exploring AWS services locally. V1 includes DynamoDB table exploration and Lambda/CloudWatch log browsing.
 
 Built with [Electrobun](https://electrobun.dev), React, and the AWS SDK v3. Runs on Windows, macOS, and Linux.
 
 ## Features
 
-- **Table browser** — sidebar lists all tables in a region with search filtering
+- **Service home** — choose between DynamoDB and Lambda/CloudWatch workspaces
+- **Table browser** — DynamoDB sidebar lists all tables in a region with search filtering
 - **Favorite tables** — star tables you use often; favorites sort to the top with a toggle to show only favorites
 - **Scan & Query modes** — full table scans or targeted queries with a single toggle
 - **Query builder** — select indexes (table, GSI, LSI), set partition/sort key conditions with 7 sort key operators, and add multiple filter conditions with 11 DynamoDB filter operators
 - **Saved queries** — save and reuse query templates across tables
+- **Lambda browser** — list Lambda functions in a region with search, favorites, metadata, and local cache indicators
+- **CloudWatch logs** — fetch recent Lambda logs, cache sessions, search loaded events, and paginate with CloudWatch tokens
 - **Session caching** — scan and query results are cached locally so you can revisit them without re-fetching
 - **Data grid** — fast table rendering with column visibility controls, type indicators, and key badges (PK, SK, GSI, LSI)
 - **Pagination** — load more results on demand with full session history
@@ -47,10 +50,13 @@ Other scripts:
 src/
   shared/          Shared types and schemas between frontend and backend
   bun/             Backend — Electrobun main process, AWS SDK calls, file cache
-    services/      DynamoClient, TableService, QueryService, CacheService
+    services/      DynamoDB, Lambda, CloudWatch Logs, and Cache services
   mainview/        Frontend — React + Tailwind
     components/    Reusable UI components
     features/
+      home/        Service selector
+      dynamodb/    DynamoDB workspace wrapper
+      lambda/      Lambda function and CloudWatch logs explorer
       sidebar/     Table list and list items
       table-view/  Data grid, query builder, sessions
       settings/    Settings panel
@@ -64,7 +70,7 @@ src/
 - **[Electrobun](https://electrobun.dev)** — desktop runtime with typed RPC between Bun and the system webview
 - **React 19** + **Tailwind CSS 4** — UI
 - **@tanstack/react-table** — data grid
-- **AWS SDK v3** — DynamoDB client and document client
+- **AWS SDK v3** — DynamoDB, Lambda, and CloudWatch Logs clients
 - **Effect** — typed error handling in the backend service layer
 - **Vite 8** — frontend bundling with HMR
 
@@ -72,7 +78,7 @@ src/
 
 The app runs two processes connected via Electrobun's typed RPC:
 
-1. **Bun process** — handles AWS SDK calls (list tables, describe table, scan, query) and manages a local file cache at `~/.ddbflow/cache/`
+1. **Bun process** — handles AWS SDK calls for DynamoDB, Lambda, and CloudWatch Logs, and manages a local file cache at `~/.ddbflow/cache/`
 2. **Webview process** — React UI that communicates with the Bun process over RPC. All state is managed through React contexts with automatic cache persistence.
 
 ## License

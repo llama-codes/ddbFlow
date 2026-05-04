@@ -6,7 +6,7 @@ interface DropdownOption {
   label: string;
 }
 
-interface DropdownProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange"> {
+interface DropdownProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange" | "size"> {
   options: DropdownOption[];
   value: string | number;
   onChange: (value: string) => void;

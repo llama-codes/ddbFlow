@@ -55,3 +55,51 @@ export interface QueryResult {
   scannedCount: number;
   lastEvaluatedKey?: Record<string, unknown>;
 }
+
+export type AwsService = "home" | "dynamodb" | "lambda";
+
+export interface LambdaFunctionInfo {
+  functionName: string;
+  functionArn: string;
+  runtime?: string;
+  handler?: string;
+  description?: string;
+  memorySize?: number;
+  timeout?: number;
+  lastModified?: string;
+  codeSize?: number;
+  role?: string;
+  logGroupName: string;
+}
+
+export interface LogFetchParams {
+  functionName: string;
+  startTime: number;
+  endTime: number;
+  limit?: number;
+  nextToken?: string;
+}
+
+export interface LogEvent {
+  id: string;
+  timestamp: number;
+  ingestionTime?: number;
+  message: string;
+  logStreamName: string;
+  requestId?: string;
+}
+
+export interface InvocationGroup {
+  id: string;
+  logStreamName: string;
+  requestId?: string;
+  startTime: number;
+  endTime: number;
+  eventCount: number;
+}
+
+export interface LogFetchResult {
+  events: LogEvent[];
+  groups: InvocationGroup[];
+  nextToken?: string;
+}

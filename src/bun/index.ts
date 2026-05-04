@@ -49,7 +49,7 @@ const rpc = BrowserView.defineRPC<AppRPC>({
 const url = await getMainViewUrl();
 
 const _window = new BrowserWindow({
-  title: "ddbFlow",
+  title: "AWS Flow",
   frame: { x: 100, y: 100, width: 1200, height: 800 },
   url,
   rpc,

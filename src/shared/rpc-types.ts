@@ -1,5 +1,13 @@
 import type { RPCSchema } from "electrobun/view";
-import type { TableInfo, ScanParams, QueryParams, QueryResult } from "./schemas";
+import type {
+  LambdaFunctionInfo,
+  LogFetchParams,
+  LogFetchResult,
+  TableInfo,
+  ScanParams,
+  QueryParams,
+  QueryResult,
+} from "./schemas";
 
 export type AppRPC = {
   bun: RPCSchema<{
@@ -10,6 +18,9 @@ export type AppRPC = {
       describeTable: { params: { tableName: string }; response: TableInfo };
       scan: { params: ScanParams; response: QueryResult };
       query: { params: QueryParams; response: QueryResult };
+      listFunctions: { params: Record<string, never>; response: LambdaFunctionInfo[] };
+      describeFunction: { params: { functionName: string }; response: LambdaFunctionInfo };
+      fetchLogEvents: { params: LogFetchParams; response: LogFetchResult };
       readCache: { params: { key: string }; response: string | null };
       writeCache: { params: { key: string; value: string }; response: string };
       deleteCache: { params: { key: string }; response: string };
