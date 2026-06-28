@@ -17,7 +17,8 @@ import {
   type FilterCondition,
   type FilterOperator,
 } from "../../lib/query-expression";
-import { formatSavedQuerySummary, type SavedQuery } from "../../lib/saved-queries";
+import { type SavedQuery } from "../../lib/saved-queries";
+import { SavedQueriesPanel } from "./SavedQueriesPanel";
 import type { KeySchemaElement } from "shared/schemas";
 
 const SK_OPERATORS: { value: SortKeyOperator; label: string }[] = [
@@ -58,9 +59,8 @@ export function QueryBuilder() {
   const [saveName, setSaveName] = useState("");
   const saveRef = useRef<HTMLDivElement>(null);
 
-  // Saved queries dropdown state
+  // Saved queries panel state
   const [savedQueriesOpen, setSavedQueriesOpen] = useState(false);
-  const savedQueriesRef = useRef<HTMLDivElement>(null);
 
   // Reset form when table changes
   useEffect(() => {
@@ -88,17 +88,6 @@ export function QueryBuilder() {
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, [saveMode]);
 
-  // Outside-click for saved queries dropdown
-  useEffect(() => {
-    if (!savedQueriesOpen) return;
-    function handleMouseDown(e: MouseEvent) {
-      if (savedQueriesRef.current && !savedQueriesRef.current.contains(e.target as Node)) {
-        setSavedQueriesOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleMouseDown);
-    return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [savedQueriesOpen]);
 
   const indexOptions = useMemo((): IndexOption[] => {
     if (!tableInfo) return [];
@@ -387,69 +376,31 @@ export function QueryBuilder() {
 
         <div className="flex-1" />
 
-        {/* Saved Queries dropdown */}
-        <div className="relative" ref={savedQueriesRef}>
-          <Tooltip text="Saved queries" position="top">
-            <Button.Container
-              variant="ghost"
-              onClick={() => savedQueries.length > 0 && setSavedQueriesOpen((o) => !o)}
-              disabled={savedQueries.length === 0}
-            >
-              <Button.Icon>
-                <Icon size={12} className={savedQueriesOpen ? t.text.brand : ""}>{IconPaths.bookmark}</Icon>
-              </Button.Icon>
-              {savedQueries.length > 0 && (
-                <span className={`text-xs ${t.text.faint} ml-0.5`}>{savedQueries.length}</span>
-              )}
-            </Button.Container>
-          </Tooltip>
+        {/* Saved Queries trigger */}
+        <Tooltip text="Saved queries" position="top">
+          <Button.Container
+            variant="ghost"
+            onClick={() => savedQueries.length > 0 && setSavedQueriesOpen((o) => !o)}
+            disabled={savedQueries.length === 0}
+          >
+            <Button.Icon>
+              <Icon size={12} className={savedQueriesOpen ? t.text.brand : ""}>{IconPaths.bookmark}</Icon>
+            </Button.Icon>
+            {savedQueries.length > 0 && (
+              <span className={`text-xs ${t.text.faint} ml-0.5`}>{savedQueries.length}</span>
+            )}
+          </Button.Container>
+        </Tooltip>
 
-          {savedQueriesOpen && (
-            <div
-              className={`absolute right-0 bottom-full mb-1 w-72 ${t.bg.elevated} border ${t.border.muted} rounded-md shadow-lg z-50 flex flex-col`}
-            >
-              <div className={`px-3 py-2 border-b ${t.border.base}`}>
-                <span className={`text-xs font-medium ${t.text.secondary}`}>
-                  {savedQueries.length} saved quer{savedQueries.length !== 1 ? "ies" : "y"}
-                </span>
-              </div>
-              <div className="max-h-64 overflow-y-auto py-1">
-                {savedQueries.map((query) => {
-                  const compatible = !!getCompatibleIndex(query.id);
-                  return (
-                    <div
-                      key={query.id}
-                      className={`flex items-center gap-2 px-3 py-2 text-xs group ${
-                        compatible
-                          ? `${t.text.secondary} cursor-pointer hover:${t.bg.hover}`
-                          : `${t.text.faint} opacity-40 cursor-default`
-                      }`}
-                      onClick={() => compatible && handleLoadQuery(query)}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate font-medium">{query.name}</div>
-                        <div className={`${t.text.faint} truncate`}>
-                          {formatSavedQuerySummary(query)}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className={`p-0.5 opacity-0 group-hover:opacity-100 ${t.text.faint} hover:${t.text.error} transition-opacity cursor-pointer`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteQuery(query.id);
-                        }}
-                        title="Delete saved query"
-                      >
-                        <Icon size={12}>{IconPaths.trash}</Icon>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+        {savedQueriesOpen && (
+          <SavedQueriesPanel
+            savedQueries={savedQueries}
+            onLoadQuery={handleLoadQuery}
+            onDeleteQuery={deleteQuery}
+            getCompatibleIndex={getCompatibleIndex}
+            onClose={() => setSavedQueriesOpen(false)}
+          />
+        )}
 
         {/* Save button / inline input */}
         <div ref={saveRef}>
